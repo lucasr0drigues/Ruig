@@ -38,6 +38,9 @@ namespace Ruig.Domain.Entities
             string profileMedium,
             string profile)
         {
+            if (string.IsNullOrWhiteSpace(externalId))
+                throw new DomainException("External ID is required");
+
             ExternalId = externalId;
             Username = username;
             Firstname = firstname;
