@@ -1,4 +1,5 @@
 ﻿using Ruig.Domain.Common;
+using Ruig.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,7 +8,7 @@ namespace Ruig.Domain.Entities
 {
     public class Athlete : BaseAuditableEntity
     {
-        public string ExternalId { get; private set; }
+        public string ExternalAthleteId { get; private set; }
         public string? Username { get; private set; }
         public string? Firstname { get; private set; }
         public string? Lastname { get; private set; }
@@ -15,15 +16,19 @@ namespace Ruig.Domain.Entities
         public string? City { get; private set; }
         public string? State { get; private set; }
         public string? Country { get; private set; }
-        public string? Sex { get; private set; }
-        public bool Premium { get; private set; }
+        public Sex? Sex { get; private set; }
         public DateTime ExternalCreatedAt { get; private set; }
         public DateTime ExternalUpdatedAt { get; private set; }
         public string ProfileMedium { get; private set; }
         public string Profile { get; private set; }
 
+        private readonly List<Activity> _activities = new();
+        public IReadOnlyCollection<Activity> Activities => _activities.AsReadOnly();
+
+        private Athlete() { }
+
         public Athlete(
-            string externalId,
+            string externalAthleteId,
             string? username,
             string? firstname,
             string? lastname,
@@ -31,17 +36,16 @@ namespace Ruig.Domain.Entities
             string? city,
             string? state,
             string? country,
-            string? sex,
-            bool premium,
+            Sex? sex,
             DateTime externalCreatedAt,
             DateTime externalUpdatedAt,
             string profileMedium,
             string profile)
         {
-            if (string.IsNullOrWhiteSpace(externalId))
+            if (string.IsNullOrWhiteSpace(externalAthleteId))
                 throw new DomainException("External ID is required");
 
-            ExternalId = externalId;
+            ExternalAthleteId = externalAthleteId;
             Username = username;
             Firstname = firstname;
             Lastname = lastname;
@@ -50,7 +54,6 @@ namespace Ruig.Domain.Entities
             State = state;
             Country = country;
             Sex = sex;
-            Premium = premium;
             ExternalCreatedAt = externalCreatedAt;
             ExternalUpdatedAt = externalUpdatedAt;
             ProfileMedium = profileMedium;

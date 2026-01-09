@@ -6,7 +6,7 @@ namespace Ruig.Domain.Common
 {
     public abstract class BaseEntity : IEquatable<BaseEntity>
     {
-        protected BaseEntity(Guid id)
+        protected BaseEntity()
         {
             Id = Guid.NewGuid();
         }
