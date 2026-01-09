@@ -6,6 +6,11 @@ namespace Ruig.Domain.Common
 {
     public abstract class BaseEntity : IEquatable<BaseEntity>
     {
+        protected BaseEntity(Guid id)
+        {
+            Id = Guid.NewGuid();
+        }
+
         public Guid Id { get; init; }
 
         public virtual bool Equals(BaseEntity? other)
