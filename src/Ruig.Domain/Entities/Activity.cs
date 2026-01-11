@@ -10,7 +10,7 @@ namespace Ruig.Domain.Entities
     public class Activity : BaseEntity
     {
         public Guid AthleteId { get; init; }
-        public string? ExternalActivityId { get; private set; }
+        public string ExternalActivityId { get; private set; }
         public string? Name { get; private set; }
         public ActivitySport? Sport { get; private set; }
         public double? DistanceMeters { get; private set; }
@@ -26,7 +26,7 @@ namespace Ruig.Domain.Entities
 
         public Activity(
             Guid athleteId,
-            string? externalActivityId,
+            string externalActivityId,
             string? name,
             ActivitySport? sport,
             double? distanceMeters,

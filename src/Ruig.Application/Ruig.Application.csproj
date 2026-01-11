@@ -6,4 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Activities\Commands\" />
+    <Folder Include="Activities\Queries\" />
+    <Folder Include="Athletes\Commands\" />
+    <Folder Include="Athletes\Queries\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ruig.Domain\Ruig.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
