@@ -22,8 +22,8 @@ namespace Ruig.Domain.Entities
         public string ProfileMedium { get; private set; }
         public string Profile { get; private set; }
 
-        private readonly List<Activity> _activities = new();
-        public IReadOnlyCollection<Activity> Activities => _activities.AsReadOnly();
+        //private readonly List<Activity> _activities = new();
+        //public IReadOnlyCollection<Activity> Activities => _activities.AsReadOnly();
 
         private Athlete() { }
 
@@ -43,7 +43,7 @@ namespace Ruig.Domain.Entities
             string profile)
         {
             if (string.IsNullOrWhiteSpace(externalAthleteId))
-                throw new DomainException("External ID is required");
+                throw new DomainException("External Athlete ID is required");
 
             ExternalAthleteId = externalAthleteId;
             Username = username;

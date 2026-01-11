@@ -9,6 +9,7 @@ namespace Ruig.Domain.Entities
 {
     public class Activity : BaseEntity
     {
+        public Guid AthleteId { get; init; }
         public string? ExternalActivityId { get; private set; }
         public string? Name { get; private set; }
         public ActivitySport? Sport { get; private set; }
@@ -23,7 +24,8 @@ namespace Ruig.Domain.Entities
 
         private Activity() { }
 
-        internal Activity(
+        public Activity(
+            Guid athleteId,
             string? externalActivityId,
             string? name,
             ActivitySport? sport,
@@ -37,6 +39,10 @@ namespace Ruig.Domain.Entities
             string? externalMapId,
             string? summaryPolyline)
         {
+            if (externalActivityId == null)
+                throw new DomainException("External Activity ID is required.");
+
+            AthleteId = athleteId;
             ExternalActivityId = externalActivityId;
             Name = name;
             Sport = sport;
