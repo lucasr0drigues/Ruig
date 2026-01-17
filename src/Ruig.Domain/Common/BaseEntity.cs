@@ -17,5 +17,7 @@ namespace Ruig.Domain.Common
         {
             return other != null && other.Id == Id;
         }
+
+        public override int GetHashCode() => Id.GetHashCode();
     }
 }
