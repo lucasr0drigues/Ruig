@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Folder Include="Activities\Queries\" />
-    <Folder Include="Athletes\Commands\" />
     <Folder Include="Athletes\Queries\" />
   </ItemGroup>
 
