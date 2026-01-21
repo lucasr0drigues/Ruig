@@ -11,5 +11,6 @@ namespace Ruig.Application.Common.Interfaces
         Task<bool> Exists(Guid athleteId, CancellationToken cancellationToken);
         Task AddAsync(Athlete athlete, CancellationToken cancellationToken);
         Task SaveChangesAsync(CancellationToken cancellationToken);
+        Task<Athlete?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken);
     }
 }
