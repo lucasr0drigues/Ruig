@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Ruig.Domain.Entities;
+using Ruig.Infrastructure.Strava;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -15,6 +16,7 @@ namespace Ruig.Infrastructure.Common.Persistance
 
         public DbSet<Athlete> Athletes => Set<Athlete>();
         public DbSet<Activity>  Activities => Set<Activity>();
+        public DbSet<StravaToken> StravaTokens => Set<StravaToken>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
