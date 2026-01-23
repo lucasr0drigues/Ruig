@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Ruig.Application\Ruig.Application.csproj" />
     <ProjectReference Include="..\Ruig.Domain\Ruig.Domain.csproj" />
   </ItemGroup>
 
