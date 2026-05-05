@@ -29,6 +29,11 @@ public sealed class StartStravaOAuthHandlerTests
         {
             throw new NotSupportedException();
         }
+
+        public Task<StravaRefreshTokenResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeOAuthStateStore : IStravaOAuthStateStore

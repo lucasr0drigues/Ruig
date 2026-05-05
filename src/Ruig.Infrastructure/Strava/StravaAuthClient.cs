@@ -61,5 +61,34 @@ namespace Ruig.Infrastructure.Strava
                 dto.Athlete.Id,
                 dto.Scope ?? string.Empty);
         }
+
+        public async Task<StravaRefreshTokenResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                throw new ArgumentException("Strava refresh token is required", nameof(refreshToken));
+
+            var payload = new Dictionary<string, string>
+            {
+                ["client_id"] = _options.ClientId,
+                ["client_secret"] = _options.ClientSecret,
+                ["refresh_token"] = refreshToken,
+                ["grant_type"] = "refresh_token"
+            };
+
+            using var content = new FormUrlEncodedContent(payload);
+
+            using var response = await _httpClient.PostAsync(_options.TokenUrl, content, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var dto = await response.Content.ReadFromJsonAsync<RefreshTokenDto>(cancellationToken);
+
+            if (dto is null)
+                throw new InvalidOperationException("Strava refresh token response was empty");
+
+            return new StravaRefreshTokenResponse(
+                dto.AccessToken,
+                dto.RefreshToken,
+                dto.ExpiresAt);
+        }
     }
 }

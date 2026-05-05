@@ -44,6 +44,26 @@ public sealed class StravaAuthClientTests
         Assert.Equal("read,activity:read", token.Scope);
     }
 
+    [Fact]
+    public async Task RefreshTokenAsync_MapsRefreshResponse()
+    {
+        var responseJson = """
+        {
+          "access_token": "fresh-access-token",
+          "refresh_token": "fresh-refresh-token",
+          "expires_at": 1900000000
+        }
+        """;
+
+        var client = CreateClient(new HttpClient(new StaticResponseHandler(responseJson)));
+
+        var token = await client.RefreshTokenAsync("refresh-token", CancellationToken.None);
+
+        Assert.Equal("fresh-access-token", token.AccessToken);
+        Assert.Equal("fresh-refresh-token", token.RefreshToken);
+        Assert.Equal(1_900_000_000, token.ExpiresAtUnixSeconds);
+    }
+
     private static StravaAuthClient CreateClient(HttpClient httpClient)
     {
         var options = Options.Create(new StravaOptions

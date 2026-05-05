@@ -10,5 +10,7 @@ namespace Ruig.Application.Common.Interfaces.Strava
         string BuildAuthorizeUrl(string state);
 
         Task<StravaTokenResponse> ExchangeCodeAsync(string code, CancellationToken cancellationToken);
+
+        Task<StravaRefreshTokenResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken);
     }
 }

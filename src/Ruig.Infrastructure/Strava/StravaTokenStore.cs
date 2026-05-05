@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Infrastructure.Common.Persistance;
 
@@ -6,11 +7,20 @@ namespace Ruig.Infrastructure.Strava
 {
     public sealed class StravaTokenStore : IStravaTokenStore
     {
-        private readonly AppDbContext _dbContext;
+        private static readonly TimeSpan RefreshSkew = TimeSpan.FromMinutes(5);
 
-        public StravaTokenStore(AppDbContext dbContext)
+        private readonly AppDbContext _dbContext;
+        private readonly IStravaAuthClient _authClient;
+        private readonly IDateTimeProvider _dateTimeProvider;
+
+        public StravaTokenStore(
+            AppDbContext dbContext,
+            IStravaAuthClient authClient,
+            IDateTimeProvider dateTimeProvider)
         {
             _dbContext = dbContext;
+            _authClient = authClient;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task SaveOrUpdateAsync(
@@ -52,12 +62,35 @@ namespace Ruig.Infrastructure.Strava
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        public Task<string?> GetAccessTokenAsync(Guid athleteId, CancellationToken cancellationToken)
+        public async Task<string?> GetAccessTokenAsync(Guid athleteId, CancellationToken cancellationToken)
         {
-            return _dbContext.StravaTokens
-                .Where(t => t.AthleteId == athleteId)
-                .Select(t => t.AccessToken)
-                .FirstOrDefaultAsync(cancellationToken);
+            var token = await _dbContext.StravaTokens
+                .FirstOrDefaultAsync(t => t.AthleteId == athleteId, cancellationToken);
+
+            if (token is null)
+                return null;
+
+            if (token.ExpiresAtUtc > GetUtcNow().Add(RefreshSkew))
+                return token.AccessToken;
+
+            var refreshed = await _authClient.RefreshTokenAsync(token.RefreshToken, cancellationToken);
+
+            token.AccessToken = refreshed.AccessToken;
+            token.RefreshToken = refreshed.RefreshToken;
+            token.ExpiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(refreshed.ExpiresAtUnixSeconds);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            return token.AccessToken;
+        }
+
+        private DateTimeOffset GetUtcNow()
+        {
+            var utcNow = _dateTimeProvider.UtcNow.Kind == DateTimeKind.Utc
+                ? _dateTimeProvider.UtcNow
+                : DateTime.SpecifyKind(_dateTimeProvider.UtcNow, DateTimeKind.Utc);
+
+            return new DateTimeOffset(utcNow);
         }
     }
 }

@@ -121,6 +121,11 @@ public sealed class CompleteStravaOAuthHandlerTests
                 123,
                 "read,activity:read"));
         }
+
+        public Task<StravaRefreshTokenResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeStravaApiClient : IStravaApiClient

@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Ruig.Application.Common.Interfaces;
+using Ruig.Application.Common.Interfaces.Strava;
+using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
 using Ruig.Domain.Enums;
 using Ruig.Infrastructure.Common.Persistance;
@@ -9,6 +12,8 @@ namespace Ruig.Application.Tests;
 
 public sealed class PersistenceTests
 {
+    private static readonly DateTime FixedUtcNow = new(2026, 5, 5, 12, 0, 0, DateTimeKind.Utc);
+
     [Fact]
     public async Task AthleteRepository_AddAndUpdate_PersistsAthlete()
     {
@@ -35,14 +40,15 @@ public sealed class PersistenceTests
         dbContext.Athletes.Add(athlete);
         await dbContext.SaveChangesAsync();
 
-        var store = new StravaTokenStore(dbContext);
+        var authClient = new FakeStravaAuthClient();
+        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow));
 
         await store.SaveOrUpdateAsync(
             athlete.Id,
             123,
             "access-one",
             "refresh-one",
-            DateTimeOffset.UtcNow.AddHours(1),
+            new DateTimeOffset(FixedUtcNow).AddHours(1),
             "read,activity:read",
             CancellationToken.None);
 
@@ -51,15 +57,45 @@ public sealed class PersistenceTests
             123,
             "access-two",
             "refresh-two",
-            DateTimeOffset.UtcNow.AddHours(2),
+            new DateTimeOffset(FixedUtcNow).AddHours(2),
             "read,activity:read",
             CancellationToken.None);
 
         var accessToken = await store.GetAccessTokenAsync(athlete.Id, CancellationToken.None);
 
         Assert.Equal("access-two", accessToken);
+        Assert.False(authClient.RefreshWasCalled);
         Assert.Equal(1, await dbContext.StravaTokens.CountAsync());
         Assert.Equal("refresh-two", await dbContext.StravaTokens.Select(t => t.RefreshToken).SingleAsync());
+    }
+
+    [Fact]
+    public async Task StravaTokenStore_GetAccessToken_RefreshesExpiredToken()
+    {
+        await using var dbContext = CreateDbContext();
+        var athlete = CreateAthlete(firstName: "Lucas");
+        dbContext.Athletes.Add(athlete);
+        await dbContext.SaveChangesAsync();
+
+        var authClient = new FakeStravaAuthClient();
+        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow));
+
+        await store.SaveOrUpdateAsync(
+            athlete.Id,
+            123,
+            "expired-access",
+            "old-refresh",
+            new DateTimeOffset(FixedUtcNow).AddMinutes(-1),
+            "read,activity:read",
+            CancellationToken.None);
+
+        var accessToken = await store.GetAccessTokenAsync(athlete.Id, CancellationToken.None);
+
+        Assert.Equal("fresh-access", accessToken);
+        Assert.True(authClient.RefreshWasCalled);
+        Assert.Equal("old-refresh", authClient.ObservedRefreshToken);
+        Assert.Equal("fresh-refresh", await dbContext.StravaTokens.Select(t => t.RefreshToken).SingleAsync());
+        Assert.Equal(1_900_000_000, await dbContext.StravaTokens.Select(t => t.ExpiresAtUtc.ToUnixTimeSeconds()).SingleAsync());
     }
 
     private static AppDbContext CreateDbContext()
@@ -87,5 +123,42 @@ public sealed class PersistenceTests
             new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
             "medium",
             "profile");
+    }
+
+    private sealed class FakeStravaAuthClient : IStravaAuthClient
+    {
+        public bool RefreshWasCalled { get; private set; }
+        public string? ObservedRefreshToken { get; private set; }
+
+        public string BuildAuthorizeUrl(string state)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<StravaTokenResponse> ExchangeCodeAsync(string code, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<StravaRefreshTokenResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+        {
+            RefreshWasCalled = true;
+            ObservedRefreshToken = refreshToken;
+
+            return Task.FromResult(new StravaRefreshTokenResponse(
+                "fresh-access",
+                "fresh-refresh",
+                1_900_000_000));
+        }
+    }
+
+    private sealed class FakeDateTimeProvider : IDateTimeProvider
+    {
+        public FakeDateTimeProvider(DateTime utcNow)
+        {
+            UtcNow = utcNow;
+        }
+
+        public DateTime UtcNow { get; }
     }
 }
