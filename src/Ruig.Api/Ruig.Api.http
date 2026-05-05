@@ -1,6 +1,14 @@
 @Ruig.Api_HostAddress = http://localhost:5129
+@Ruig.Api_HttpsAddress = https://localhost:7287
 
-GET {{Ruig.Api_HostAddress}}/weatherforecast/
+GET {{Ruig.Api_HttpsAddress}}/auth/strava/start
+Accept: application/json
+
+###
+
+# After approving Strava OAuth in the browser, Strava redirects here with code/state.
+# Paste values from the browser URL to manually exercise the callback.
+GET {{Ruig.Api_HttpsAddress}}/auth/strava/callback?code={{strava_code}}&state={{strava_state}}
 Accept: application/json
 
 ###
