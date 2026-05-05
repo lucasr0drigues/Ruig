@@ -1,9 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Ruig.Domain.Common;
 using Ruig.Domain.Entities;
 using Ruig.Infrastructure.Strava;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Ruig.Infrastructure.Common.Persistance
 {
@@ -11,11 +9,10 @@ namespace Ruig.Infrastructure.Common.Persistance
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
-            
         }
 
         public DbSet<Athlete> Athletes => Set<Athlete>();
-        public DbSet<Activity>  Activities => Set<Activity>();
+        public DbSet<Activity> Activities => Set<Activity>();
         public DbSet<StravaToken> StravaTokens => Set<StravaToken>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -23,6 +20,26 @@ namespace Ruig.Infrastructure.Common.Persistance
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTimeOffset.UtcNow;
+
+            foreach (var entry in ChangeTracker.Entries<BaseAuditableEntity>())
+            {
+                if (entry.State == EntityState.Added)
+                {
+                    entry.Entity.CreatedAt = now;
+                    entry.Entity.LastUpdatedAt = now;
+                }
+                else if (entry.State == EntityState.Modified)
+                {
+                    entry.Entity.LastUpdatedAt = now;
+                }
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
         }
     }
 }

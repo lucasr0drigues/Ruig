@@ -25,7 +25,12 @@ namespace Ruig.Domain.Entities
         //private readonly List<Activity> _activities = new();
         //public IReadOnlyCollection<Activity> Activities => _activities.AsReadOnly();
 
-        private Athlete() { }
+        private Athlete()
+        {
+            ExternalAthleteId = null!;
+            ProfileMedium = string.Empty;
+            Profile = string.Empty;
+        }
 
         public Athlete(
             string externalAthleteId,
@@ -58,6 +63,25 @@ namespace Ruig.Domain.Entities
             ExternalUpdatedAt = externalUpdatedAt;
             ProfileMedium = profileMedium;
             Profile = profile;
+        }
+
+        public void UpdateFromExternal(Athlete externalAthlete)
+        {
+            if (externalAthlete.ExternalAthleteId != ExternalAthleteId)
+                throw new DomainException("External Athlete ID cannot be changed");
+
+            Username = externalAthlete.Username;
+            Firstname = externalAthlete.Firstname;
+            Lastname = externalAthlete.Lastname;
+            Bio = externalAthlete.Bio;
+            City = externalAthlete.City;
+            State = externalAthlete.State;
+            Country = externalAthlete.Country;
+            Sex = externalAthlete.Sex;
+            ExternalCreatedAt = externalAthlete.ExternalCreatedAt;
+            ExternalUpdatedAt = externalAthlete.ExternalUpdatedAt;
+            ProfileMedium = externalAthlete.ProfileMedium;
+            Profile = externalAthlete.Profile;
         }
     }
 }

@@ -9,5 +9,5 @@ namespace Ruig.Application.Common.Interfaces.Strava.Models
         string RefreshToken,
         long ExpiresAtUnixSeconds,
         long StravaAthleteId,
-        string scope);
+        string Scope);
 }

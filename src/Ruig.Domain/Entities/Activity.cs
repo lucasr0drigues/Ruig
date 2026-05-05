@@ -22,7 +22,10 @@ namespace Ruig.Domain.Entities
         public string? DeviceName { get; private set; }
         public ActivityMap? Map { get; private set; }
 
-        private Activity() { }
+        private Activity()
+        {
+            ExternalActivityId = null!;
+        }
 
         public Activity(
             Guid athleteId,

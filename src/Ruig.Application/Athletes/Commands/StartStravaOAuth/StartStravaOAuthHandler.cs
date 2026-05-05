@@ -9,19 +9,25 @@ namespace Ruig.Application.Athletes.Commands.StartStravaOAuth
 {
     public sealed class StartStravaOAuthHandler : IRequestHandler<StartStravaOAuthCommand, StartStravaOAuthResult>
     {
-        private readonly IStravaAuthClient _authClient;
+        private static readonly TimeSpan StateTtl = TimeSpan.FromMinutes(10);
 
-        public StartStravaOAuthHandler(IStravaAuthClient authClient)
+        private readonly IStravaAuthClient _authClient;
+        private readonly IStravaOAuthStateStore _stateStore;
+
+        public StartStravaOAuthHandler(IStravaAuthClient authClient, IStravaOAuthStateStore stateStore)
         {
             _authClient = authClient;
+            _stateStore = stateStore;
         }
 
-        public Task<StartStravaOAuthResult> Handle(StartStravaOAuthCommand request, CancellationToken cancellationToken)
+        public async Task<StartStravaOAuthResult> Handle(StartStravaOAuthCommand request, CancellationToken cancellationToken)
         {
             var state = CreateState();
+            await _stateStore.StoreAsync(state, StateTtl, cancellationToken);
+
             var url = _authClient.BuildAuthorizeUrl(state);
 
-            return Task.FromResult(new StartStravaOAuthResult(url, state));
+            return new StartStravaOAuthResult(url, state);
         }
 
         private static string CreateState()

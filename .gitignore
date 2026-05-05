@@ -6,6 +6,11 @@
 # dotenv files
 .env
 
+# Local sandbox/tooling homes
+.dotnet_home/
+.nuget_packages/
+IMPLEMENTATION_PLAN.local.md
+
 # User-specific files
 *.rsuser
 *.suo

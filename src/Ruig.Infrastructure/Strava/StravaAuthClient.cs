@@ -22,7 +22,7 @@ namespace Ruig.Infrastructure.Strava
 
         public string BuildAuthorizeUrl(string state)
         {
-            var scope = UrlEncoder.Default.Encode("read,activity:read_all,profile:read_all");
+            var scope = UrlEncoder.Default.Encode("read,activity:read");
             var redirect = UrlEncoder.Default.Encode(_options.RedirectUri);
 
             return $"{_options.AuthorizeBaseUrl}" +
@@ -55,10 +55,10 @@ namespace Ruig.Infrastructure.Strava
                 throw new InvalidOperationException("Strava token response was empty");
 
             return new StravaTokenResponse(
-                dto.Access_Token,
-                dto.Refresh_Token,
-                dto.Expires_At,
-                dto.athlete.id,
+                dto.AccessToken,
+                dto.RefreshToken,
+                dto.ExpiresAt,
+                dto.Athlete.Id,
                 dto.Scope ?? string.Empty);
         }
     }

@@ -16,13 +16,20 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
         private readonly IStravaAuthClient _authClient;
         private readonly IStravaApiClient _apiClient;
         private readonly IStravaTokenStore _tokenStore;
+        private readonly IStravaOAuthStateStore _stateStore;
         private readonly IAthleteRepository _athleteRepository;
 
-        public CompleteStravaOAuthHandler(IStravaAuthClient authClient, IStravaApiClient apiClient, IStravaTokenStore tokenStore, IAthleteRepository athleteRepository)
+        public CompleteStravaOAuthHandler(
+            IStravaAuthClient authClient,
+            IStravaApiClient apiClient,
+            IStravaTokenStore tokenStore,
+            IStravaOAuthStateStore stateStore,
+            IAthleteRepository athleteRepository)
         {
             _authClient = authClient;
             _apiClient = apiClient;
             _tokenStore = tokenStore;
+            _stateStore = stateStore;
             _athleteRepository = athleteRepository;
         }
 
@@ -33,6 +40,10 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 
             if (string.IsNullOrWhiteSpace(request.State))
                 throw new ArgumentException("OAuth state is required", nameof(request.State));
+
+            var stateIsValid = await _stateStore.ConsumeAsync(request.State, cancellationToken);
+            if (!stateIsValid)
+                throw new InvalidOperationException("OAuth state is invalid or expired");
 
             var token = await _authClient.ExchangeCodeAsync(request.Code, cancellationToken);
 

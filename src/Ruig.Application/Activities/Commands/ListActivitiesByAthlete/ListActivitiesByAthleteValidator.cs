@@ -12,6 +12,7 @@ namespace Ruig.Application.Activities.Commands.ListActivitiesByAthlete
         {
             RuleFor(x => x.AthleteId).NotEmpty();
             RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
+            RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
 
             RuleFor(x => x)
                 .Must(x => x.FromUtc == null || x.ToUtc == null || x.FromUtc <= x.ToUtc)

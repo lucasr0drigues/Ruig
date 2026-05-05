@@ -7,9 +7,10 @@ namespace Ruig.Application.Common.Interfaces
 {
     public interface IAthleteRepository
     {
-        Task<Activity?> GetByIdAsync(Guid athleteId,  CancellationToken cancellationToken);
+        Task<Athlete?> GetByIdAsync(Guid athleteId,  CancellationToken cancellationToken);
         Task<bool> Exists(Guid athleteId, CancellationToken cancellationToken);
         Task AddAsync(Athlete athlete, CancellationToken cancellationToken);
+        Task UpdateFromExternalAsync(Guid athleteId, Athlete externalAthlete, CancellationToken cancellationToken);
         Task SaveChangesAsync(CancellationToken cancellationToken);
         Task<Athlete?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken);
     }
