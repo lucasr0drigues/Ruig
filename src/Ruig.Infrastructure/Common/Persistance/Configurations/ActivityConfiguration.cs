@@ -49,7 +49,17 @@ namespace Ruig.Infrastructure.Common.Persistance.Configurations
             builder.Property(a => a.StartedAtUtc);
             builder.HasIndex(a => a.StartedAtUtc);
 
+            builder.Property(a => a.LocalDate);
+            builder.HasIndex(a => a.LocalDate);
+
             builder.Property(a => a.UtcOffsetAtStart);
+
+            builder.Property(a => a.Visibility)
+                .HasConversion<int>()
+                .IsRequired();
+
+            builder.Property(a => a.DeletedAtUtc);
+            builder.HasIndex(a => a.DeletedAtUtc);
 
             builder.Property(a => a.DeviceName)
                 .HasMaxLength(200);

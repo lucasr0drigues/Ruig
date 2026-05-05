@@ -31,7 +31,7 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
         {
             var query = _dbContext.Activities
                 .AsNoTracking()
-                .Where(a => a.AthleteId == AthleteId);
+                .Where(a => a.AthleteId == AthleteId && a.DeletedAtUtc == null);
 
             if (FromUtc is not null)
             {

@@ -18,7 +18,10 @@ namespace Ruig.Domain.Entities
         public int? ElapsedTimeSeconds { get; private set; }
         public double? TotalElevationGainMeters { get; private set; }
         public DateTimeOffset? StartedAtUtc { get; private set; }
+        public DateOnly? LocalDate { get; private set; }
         public TimeSpan? UtcOffsetAtStart { get; private set; }
+        public ActivityVisibility Visibility { get; private set; }
+        public DateTimeOffset? DeletedAtUtc { get; private set; }
         public string? DeviceName { get; private set; }
         public ActivityMap? Map { get; private set; }
 
@@ -38,6 +41,7 @@ namespace Ruig.Domain.Entities
             double? totalElevationGainMeters,
             DateTimeOffset? startedAtUtc,
             TimeSpan? utcOffsetAtStart,
+            ActivityVisibility visibility,
             string? deviceName,
             string? externalMapId,
             string? summaryPolyline)
@@ -54,10 +58,29 @@ namespace Ruig.Domain.Entities
             ElapsedTimeSeconds = elapsedTimeSeconds;
             TotalElevationGainMeters = totalElevationGainMeters;
             StartedAtUtc = startedAtUtc;
+            LocalDate = GetLocalDate(startedAtUtc, utcOffsetAtStart);
             UtcOffsetAtStart = utcOffsetAtStart;
+            Visibility = visibility;
             DeviceName = deviceName;
 
             Map = summaryPolyline is null ? null : ActivityMap.Create(externalMapId, summaryPolyline);
+        }
+
+        public void MarkDeleted(DateTimeOffset deletedAtUtc)
+        {
+            DeletedAtUtc = deletedAtUtc;
+        }
+
+        private static DateOnly? GetLocalDate(DateTimeOffset? startedAtUtc, TimeSpan? utcOffsetAtStart)
+        {
+            if (startedAtUtc is null)
+                return null;
+
+            var localDateTime = utcOffsetAtStart is null
+                ? startedAtUtc.Value.UtcDateTime
+                : startedAtUtc.Value.ToOffset(utcOffsetAtStart.Value).DateTime;
+
+            return DateOnly.FromDateTime(localDateTime);
         }
     }
 }
