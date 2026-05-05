@@ -5,8 +5,10 @@ using System.Net.Http.Json;
 
 namespace Ruig.Infrastructure.Strava
 {
-    internal sealed class StravaApiClient : IStravaApiClient
+    public sealed class StravaApiClient : IStravaApiClient
     {
+        private const int MaxPerPage = 200;
+
         private readonly HttpClient _httpClient;
 
         public StravaApiClient(HttpClient httpClient)
@@ -19,8 +21,7 @@ namespace Ruig.Infrastructure.Strava
             if (string.IsNullOrWhiteSpace(accessToken))
                 throw new ArgumentException("Strava access token is required", nameof(accessToken));
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, "athlete");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var request = CreateAuthorizedRequest(HttpMethod.Get, "athlete", accessToken);
 
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
@@ -44,6 +45,109 @@ namespace Ruig.Infrastructure.Strava
                 dto.Profile,
                 dto.CreatedAt,
                 dto.UpdatedAt);
+        }
+
+        public async Task<IReadOnlyList<StravaActivityResponse>> ListAthleteActivitiesAsync(
+            string accessToken,
+            DateTimeOffset? afterUtc,
+            DateTimeOffset? beforeUtc,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+                throw new ArgumentException("Strava access token is required", nameof(accessToken));
+
+            var activities = new List<StravaActivityResponse>();
+            var page = 1;
+
+            while (true)
+            {
+                var url = BuildActivitiesUrl(afterUtc, beforeUtc, page);
+                using var request = CreateAuthorizedRequest(HttpMethod.Get, url, accessToken);
+
+                using var response = await _httpClient.SendAsync(request, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var dtos = await response.Content.ReadFromJsonAsync<List<ActivityDto>>(cancellationToken);
+
+                if (dtos is null)
+                    throw new InvalidOperationException("Strava activities response was empty");
+
+                if (dtos.Count == 0)
+                    break;
+
+                activities.AddRange(dtos.Select(MapActivity));
+                page++;
+            }
+
+            return activities;
+        }
+
+        public async Task<StravaActivityResponse> GetActivityAsync(
+            string accessToken,
+            long activityId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+                throw new ArgumentException("Strava access token is required", nameof(accessToken));
+
+            using var request = CreateAuthorizedRequest(HttpMethod.Get, $"activities/{activityId}", accessToken);
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var dto = await response.Content.ReadFromJsonAsync<ActivityDto>(cancellationToken);
+
+            if (dto is null)
+                throw new InvalidOperationException("Strava activity response was empty");
+
+            return MapActivity(dto);
+        }
+
+        private static HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url, string accessToken)
+        {
+            var request = new HttpRequestMessage(method, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            return request;
+        }
+
+        private static string BuildActivitiesUrl(DateTimeOffset? afterUtc, DateTimeOffset? beforeUtc, int page)
+        {
+            var query = new List<string>
+            {
+                $"page={page}",
+                $"per_page={MaxPerPage}"
+            };
+
+            if (afterUtc is not null)
+                query.Add($"after={afterUtc.Value.ToUnixTimeSeconds()}");
+
+            if (beforeUtc is not null)
+                query.Add($"before={beforeUtc.Value.ToUnixTimeSeconds()}");
+
+            return "athlete/activities?" + string.Join("&", query);
+        }
+
+        private static StravaActivityResponse MapActivity(ActivityDto dto)
+        {
+            return new StravaActivityResponse(
+                dto.Id,
+                dto.Name,
+                dto.SportType ?? dto.Type,
+                dto.DistanceMeters,
+                dto.MovingTimeSeconds,
+                dto.ElapsedTimeSeconds,
+                dto.TotalElevationGainMeters,
+                dto.StartDate,
+                dto.StartDateLocal,
+                dto.UtcOffsetSeconds,
+                dto.Timezone,
+                dto.DeviceName,
+                dto.IsPrivate,
+                dto.Visibility,
+                dto.Map is null
+                    ? null
+                    : new StravaActivityMapResponse(dto.Map.Id, dto.Map.SummaryPolyline));
         }
     }
 }

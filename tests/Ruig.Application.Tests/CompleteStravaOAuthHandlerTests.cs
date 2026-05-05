@@ -141,6 +141,23 @@ public sealed class CompleteStravaOAuthHandlerTests
         {
             return Task.FromResult(_response);
         }
+
+        public Task<IReadOnlyList<StravaActivityResponse>> ListAthleteActivitiesAsync(
+            string accessToken,
+            DateTimeOffset? afterUtc,
+            DateTimeOffset? beforeUtc,
+            CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<StravaActivityResponse> GetActivityAsync(
+            string accessToken,
+            long activityId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeTokenStore : IStravaTokenStore
