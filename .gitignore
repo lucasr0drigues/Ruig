@@ -9,6 +9,7 @@
 # Local sandbox/tooling homes
 .dotnet_home/
 .nuget_packages/
+.claude/
 IMPLEMENTATION_PLAN.local.md
 
 # User-specific files

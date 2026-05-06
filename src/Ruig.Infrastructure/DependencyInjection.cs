@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Ruig.Application.Common.Interfaces;
+using Ruig.Application.Common.Interfaces.GitHub;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Infrastructure.Common;
 using Ruig.Infrastructure.Common.Persistance;
 using Ruig.Infrastructure.Common.Persistance.Repositories;
+using Ruig.Infrastructure.GitHub;
 using Ruig.Infrastructure.Strava;
 
 namespace Ruig.Infrastructure
@@ -16,6 +18,9 @@ namespace Ruig.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<StravaOptions>(configuration.GetSection(StravaOptions.SectionName));
+            services.Configure<GitHubOptions>(configuration.GetSection(GitHubOptions.SectionName));
+
+            services.AddMemoryCache();
 
             services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(
                 configuration.GetConnectionString("Default"),
@@ -40,6 +45,9 @@ namespace Ruig.Infrastructure
                 var options = sp.GetRequiredService<IOptions<StravaOptions>>().Value;
                 client.BaseAddress = new Uri(options.ApiBaseUrl.TrimEnd('/') + "/");
             });
+
+            services.AddHttpClient<IGitHubContributionsClient, GitHubContributionsClient>();
+            services.AddScoped<IGitHubContributionsService, CachedGitHubContributionsService>();
 
             return services;
         }
