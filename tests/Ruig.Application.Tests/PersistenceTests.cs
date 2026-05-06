@@ -99,6 +99,34 @@ public sealed class PersistenceTests
     }
 
     [Fact]
+    public async Task StravaTokenStore_RevokeByStravaAthleteId_PreventsAccessTokenUse()
+    {
+        await using var dbContext = CreateDbContext();
+        var athlete = CreateAthlete(firstName: "Lucas");
+        dbContext.Athletes.Add(athlete);
+        await dbContext.SaveChangesAsync();
+
+        var authClient = new FakeStravaAuthClient();
+        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow));
+
+        await store.SaveOrUpdateAsync(
+            athlete.Id,
+            123,
+            "access-token",
+            "refresh-token",
+            new DateTimeOffset(FixedUtcNow).AddHours(1),
+            "read,activity:read",
+            CancellationToken.None);
+
+        await store.RevokeByStravaAthleteIdAsync(123, new DateTimeOffset(FixedUtcNow), CancellationToken.None);
+
+        var accessToken = await store.GetAccessTokenAsync(athlete.Id, CancellationToken.None);
+
+        Assert.Null(accessToken);
+        Assert.Equal(new DateTimeOffset(FixedUtcNow), await dbContext.StravaTokens.Select(t => t.RevokedAtUtc).SingleAsync());
+    }
+
+    [Fact]
     public async Task StravaWebhookEventStore_SaveAsync_PersistsEvent()
     {
         await using var dbContext = CreateDbContext();

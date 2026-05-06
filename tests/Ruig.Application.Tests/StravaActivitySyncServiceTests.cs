@@ -120,6 +120,11 @@ public sealed class StravaActivitySyncServiceTests
         {
             return Task.FromResult<string?>("access-token");
         }
+
+        public Task RevokeByStravaAthleteIdAsync(long stravaAthleteId, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeStravaApiClient : IStravaApiClient

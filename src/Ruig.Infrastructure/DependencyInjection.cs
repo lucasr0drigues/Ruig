@@ -28,6 +28,8 @@ namespace Ruig.Infrastructure
             services.AddScoped<IStravaTokenStore, StravaTokenStore>();
             services.AddScoped<IStravaActivitySyncService, StravaActivitySyncService>();
             services.AddScoped<IStravaWebhookEventStore, StravaWebhookEventStore>();
+            services.AddScoped<StravaWebhookProcessor>();
+            services.AddHostedService<StravaWebhookProcessingWorker>();
             services.AddSingleton<IStravaOAuthStateStore, InMemoryStravaOAuthStateStore>();
 
             services.AddHttpClient<IStravaAuthClient, StravaAuthClient>();

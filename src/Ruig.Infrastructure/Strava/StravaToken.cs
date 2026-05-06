@@ -13,5 +13,6 @@ namespace Ruig.Infrastructure.Strava
         public string RefreshToken { get; set; } = default!;
         public DateTimeOffset ExpiresAtUtc { get; set; }
         public string Scope { get; set; } = string.Empty;
+        public DateTimeOffset? RevokedAtUtc { get; set; }
     }
 }

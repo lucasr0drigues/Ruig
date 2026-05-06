@@ -187,6 +187,11 @@ public sealed class CompleteStravaOAuthHandlerTests
         {
             throw new NotSupportedException();
         }
+
+        public Task RevokeByStravaAthleteIdAsync(long stravaAthleteId, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeOAuthStateStore : IStravaOAuthStateStore

@@ -46,6 +46,8 @@ namespace Ruig.Infrastructure.Common.Persistance.Configurations
 
             builder.Property(t => t.Scope)
                 .HasMaxLength(500);
+
+            builder.Property(t => t.RevokedAtUtc);
         }
     }
 }

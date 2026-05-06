@@ -71,7 +71,15 @@ namespace Ruig.Infrastructure.Strava
                 return null;
 
             if (token.ExpiresAtUtc > GetUtcNow().Add(RefreshSkew))
+            {
+                if (token.RevokedAtUtc is not null)
+                    return null;
+
                 return token.AccessToken;
+            }
+
+            if (token.RevokedAtUtc is not null)
+                return null;
 
             var refreshed = await _authClient.RefreshTokenAsync(token.RefreshToken, cancellationToken);
 
@@ -82,6 +90,21 @@ namespace Ruig.Infrastructure.Strava
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             return token.AccessToken;
+        }
+
+        public async Task RevokeByStravaAthleteIdAsync(
+            long stravaAthleteId,
+            DateTimeOffset revokedAtUtc,
+            CancellationToken cancellationToken)
+        {
+            var token = await _dbContext.StravaTokens
+                .FirstOrDefaultAsync(t => t.StravaAthleteId == stravaAthleteId, cancellationToken);
+
+            if (token is null)
+                return;
+
+            token.RevokedAtUtc = revokedAtUtc;
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private DateTimeOffset GetUtcNow()
