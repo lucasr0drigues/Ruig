@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.GitHub;
 using Ruig.Application.Common.Interfaces.Strava;
+using Ruig.Infrastructure.Badges;
 using Ruig.Infrastructure.Common;
 using Ruig.Infrastructure.Common.Persistance;
 using Ruig.Infrastructure.Common.Persistance.Repositories;
@@ -30,6 +31,9 @@ namespace Ruig.Infrastructure
             services.AddScoped<IDateTimeProvider, DateTimeProvider>();
             services.AddScoped<IAthleteRepository, AthleteRepository>();
             services.AddScoped<IActivityRepository, ActivityRepository>();
+            services.AddScoped<IBadgeRepository, BadgeRepository>();
+            services.AddSingleton<IBadgeSlugGenerator, RandomBadgeSlugGenerator>();
+            services.AddSingleton<IBadgeSvgRenderer, BadgeSvgRenderer>();
             services.AddScoped<IStravaTokenStore, StravaTokenStore>();
             services.AddScoped<IStravaActivitySyncService, StravaActivitySyncService>();
             services.AddScoped<IStravaWebhookEventStore, StravaWebhookEventStore>();
