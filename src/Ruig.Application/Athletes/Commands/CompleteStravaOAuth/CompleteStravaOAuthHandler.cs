@@ -17,6 +17,7 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
         private readonly IStravaApiClient _apiClient;
         private readonly IStravaTokenStore _tokenStore;
         private readonly IStravaOAuthStateStore _stateStore;
+        private readonly IStravaActivitySyncService _activitySyncService;
         private readonly IAthleteRepository _athleteRepository;
 
         public CompleteStravaOAuthHandler(
@@ -24,12 +25,14 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
             IStravaApiClient apiClient,
             IStravaTokenStore tokenStore,
             IStravaOAuthStateStore stateStore,
+            IStravaActivitySyncService activitySyncService,
             IAthleteRepository athleteRepository)
         {
             _authClient = authClient;
             _apiClient = apiClient;
             _tokenStore = tokenStore;
             _stateStore = stateStore;
+            _activitySyncService = activitySyncService;
             _athleteRepository = athleteRepository;
         }
 
@@ -76,6 +79,8 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
                 expiresAtUtc,
                 token.Scope,
                 cancellationToken);
+
+            await _activitySyncService.InitialBackfillAsync(athleteId, cancellationToken);
 
             return athleteId;
         }

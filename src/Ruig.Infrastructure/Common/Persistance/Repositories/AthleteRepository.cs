@@ -52,5 +52,16 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
             return _dbContext.Athletes
                 .FirstOrDefaultAsync(a => a.ExternalAthleteId == externalId, cancellationToken);
         }
+
+        public async Task MarkActivitySyncCompletedAsync(Guid athleteId, DateTimeOffset syncedAtUtc, CancellationToken cancellationToken)
+        {
+            var athlete = await GetByIdAsync(athleteId, cancellationToken);
+
+            if (athlete is null)
+                throw new KeyNotFoundException($"Athlete '{athleteId}' was not found.");
+
+            athlete.MarkActivitySyncCompleted(syncedAtUtc);
+            await SaveChangesAsync(cancellationToken);
+        }
     }
 }

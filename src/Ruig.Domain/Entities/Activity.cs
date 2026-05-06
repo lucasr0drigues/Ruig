@@ -71,6 +71,26 @@ namespace Ruig.Domain.Entities
             DeletedAtUtc = deletedAtUtc;
         }
 
+        public void UpdateFromExternal(Activity externalActivity)
+        {
+            if (externalActivity.AthleteId != AthleteId || externalActivity.ExternalActivityId != ExternalActivityId)
+                throw new DomainException("External Activity identity cannot be changed.");
+
+            Name = externalActivity.Name;
+            Sport = externalActivity.Sport;
+            DistanceMeters = externalActivity.DistanceMeters;
+            MovingTimeSeconds = externalActivity.MovingTimeSeconds;
+            ElapsedTimeSeconds = externalActivity.ElapsedTimeSeconds;
+            TotalElevationGainMeters = externalActivity.TotalElevationGainMeters;
+            StartedAtUtc = externalActivity.StartedAtUtc;
+            LocalDate = externalActivity.LocalDate;
+            UtcOffsetAtStart = externalActivity.UtcOffsetAtStart;
+            Visibility = externalActivity.Visibility;
+            DeviceName = externalActivity.DeviceName;
+            Map = externalActivity.Map;
+            DeletedAtUtc = null;
+        }
+
         private static DateOnly? GetLocalDate(DateTimeOffset? startedAtUtc, TimeSpan? utcOffsetAtStart)
         {
             if (startedAtUtc is null)

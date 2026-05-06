@@ -21,6 +21,7 @@ namespace Ruig.Domain.Entities
         public DateTime ExternalUpdatedAt { get; private set; }
         public string ProfileMedium { get; private set; }
         public string Profile { get; private set; }
+        public DateTimeOffset? LastActivitySyncedAtUtc { get; private set; }
 
         //private readonly List<Activity> _activities = new();
         //public IReadOnlyCollection<Activity> Activities => _activities.AsReadOnly();
@@ -82,6 +83,11 @@ namespace Ruig.Domain.Entities
             ExternalUpdatedAt = externalAthlete.ExternalUpdatedAt;
             ProfileMedium = externalAthlete.ProfileMedium;
             Profile = externalAthlete.Profile;
+        }
+
+        public void MarkActivitySyncCompleted(DateTimeOffset syncedAtUtc)
+        {
+            LastActivitySyncedAtUtc = syncedAtUtc;
         }
     }
 }

@@ -15,8 +15,9 @@ public sealed class CompleteStravaOAuthHandlerTests
         var apiClient = new FakeStravaApiClient(CreateAthleteResponse(firstName: "Lucas"));
         var tokenStore = new FakeTokenStore();
         var stateStore = new FakeOAuthStateStore(valid: true);
+        var activitySyncService = new FakeActivitySyncService();
         var athleteRepository = new FakeAthleteRepository();
-        var handler = new CompleteStravaOAuthHandler(authClient, apiClient, tokenStore, stateStore, athleteRepository);
+        var handler = new CompleteStravaOAuthHandler(authClient, apiClient, tokenStore, stateStore, activitySyncService, athleteRepository);
 
         var athleteId = await handler.Handle(new CompleteStravaOAuthCommand("code", "state"), CancellationToken.None);
 
@@ -26,6 +27,7 @@ public sealed class CompleteStravaOAuthHandlerTests
         Assert.Equal("Lucas", athlete.Firstname);
         Assert.Equal(athleteId, tokenStore.SavedAthleteId);
         Assert.Equal("read,activity:read", tokenStore.SavedScope);
+        Assert.Equal(athleteId, activitySyncService.InitialBackfillAthleteId);
     }
 
     [Fact]
@@ -40,6 +42,7 @@ public sealed class CompleteStravaOAuthHandlerTests
             new FakeStravaApiClient(CreateAthleteResponse(firstName: "Updated")),
             new FakeTokenStore(),
             new FakeOAuthStateStore(valid: true),
+            new FakeActivitySyncService(),
             athleteRepository);
 
         var athleteId = await handler.Handle(new CompleteStravaOAuthCommand("code", "state"), CancellationToken.None);
@@ -58,6 +61,7 @@ public sealed class CompleteStravaOAuthHandlerTests
             new FakeStravaApiClient(CreateAthleteResponse(firstName: "Lucas")),
             new FakeTokenStore(),
             new FakeOAuthStateStore(valid: false),
+            new FakeActivitySyncService(),
             new FakeAthleteRepository());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -205,6 +209,32 @@ public sealed class CompleteStravaOAuthHandlerTests
         }
     }
 
+    private sealed class FakeActivitySyncService : IStravaActivitySyncService
+    {
+        public Guid? InitialBackfillAthleteId { get; private set; }
+
+        public Task InitialBackfillAsync(Guid athleteId, CancellationToken cancellationToken)
+        {
+            InitialBackfillAthleteId = athleteId;
+            return Task.CompletedTask;
+        }
+
+        public Task SyncRecentActivitiesAsync(Guid athleteId, TimeSpan lookback, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task SyncActivityAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task MarkActivityDeletedAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     private sealed class FakeAthleteRepository : IAthleteRepository
     {
         private readonly Dictionary<Guid, Athlete> _athletesById = new();
@@ -241,6 +271,12 @@ public sealed class CompleteStravaOAuthHandlerTests
         {
             var athlete = _athletesById.Values.FirstOrDefault(a => a.ExternalAthleteId == externalId);
             return Task.FromResult(athlete);
+        }
+
+        public Task MarkActivitySyncCompletedAsync(Guid athleteId, DateTimeOffset syncedAtUtc, CancellationToken cancellationToken)
+        {
+            _athletesById[athleteId].MarkActivitySyncCompleted(syncedAtUtc);
+            return Task.CompletedTask;
         }
     }
 }

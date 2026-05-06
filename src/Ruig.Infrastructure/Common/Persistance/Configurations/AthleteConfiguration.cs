@@ -54,6 +54,8 @@ namespace Ruig.Infrastructure.Common.Persistance.Configurations
 
             builder.Property(a => a.LastUpdatedAt)
                 .IsRequired();
+
+            builder.Property(a => a.LastActivitySyncedAtUtc);
         }
     }
 }

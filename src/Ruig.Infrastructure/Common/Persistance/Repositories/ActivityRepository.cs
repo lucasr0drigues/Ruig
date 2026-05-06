@@ -21,6 +21,14 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
                 .FirstOrDefaultAsync(a => a.Id == activityId, cancellationToken);
         }
 
+        public Task<Activity?> GetByExternalIdAsync(Guid athleteId, string externalActivityId, CancellationToken cancellationToken)
+        {
+            return _dbContext.Activities
+                .FirstOrDefaultAsync(
+                    a => a.AthleteId == athleteId && a.ExternalActivityId == externalActivityId,
+                    cancellationToken);
+        }
+
         public async Task<PagedResult<ListActivitiesByAthleteDto>> ListByAthleteIdAsync(
             Guid AthleteId,
             int Page,
@@ -71,6 +79,20 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
             await SaveChangesAsync(cancellationToken);
 
             return true;
+        }
+
+        public async Task UpsertAsync(Activity activity, CancellationToken cancellationToken)
+        {
+            var existing = await GetByExternalIdAsync(activity.AthleteId, activity.ExternalActivityId, cancellationToken);
+
+            if (existing is null)
+            {
+                await _dbContext.Activities.AddAsync(activity, cancellationToken);
+            }
+            else
+            {
+                existing.UpdateFromExternal(activity);
+            }
         }
 
         public Task SaveChangesAsync(CancellationToken cancellationToken)

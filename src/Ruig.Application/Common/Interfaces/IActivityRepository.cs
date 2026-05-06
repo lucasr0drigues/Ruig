@@ -10,8 +10,10 @@ namespace Ruig.Application.Common.Interfaces
     public interface IActivityRepository
     {
         Task<Activity?> GetByIdAsync(Guid activityId, CancellationToken cancellationToken);
+        Task<Activity?> GetByExternalIdAsync(Guid athleteId, string externalActivityId, CancellationToken cancellationToken);
         Task<PagedResult<ListActivitiesByAthleteDto>> ListByAthleteIdAsync(Guid AthleteId, int Page, int PageSize, DateTime? FromUtc, DateTime? ToUtc, CancellationToken cancellationToken);
         Task<bool> AddAsync(Activity activity, CancellationToken cancellationToken);
+        Task UpsertAsync(Activity activity, CancellationToken cancellationToken);
         Task SaveChangesAsync(CancellationToken cancellationToken);
     }
 }
