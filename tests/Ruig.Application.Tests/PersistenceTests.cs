@@ -181,6 +181,44 @@ public sealed class PersistenceTests
     }
 
     [Fact]
+    public async Task ActivityRepository_GetActiveLocalDatesAsync_ReturnsDistinctDatesExcludingDeleted()
+    {
+        await using var dbContext = CreateDbContext();
+        var athlete = CreateAthlete(firstName: "Lucas");
+        dbContext.Athletes.Add(athlete);
+        await dbContext.SaveChangesAsync();
+
+        var repository = new ActivityRepository(dbContext);
+
+        var startMay1 = new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero);
+        var startMay1Evening = new DateTimeOffset(2026, 5, 1, 18, 0, 0, TimeSpan.Zero);
+        var startMay3 = new DateTimeOffset(2026, 5, 3, 12, 0, 0, TimeSpan.Zero);
+        var startMay7Outside = new DateTimeOffset(2026, 5, 7, 12, 0, 0, TimeSpan.Zero);
+        var startMay4Deleted = new DateTimeOffset(2026, 5, 4, 7, 0, 0, TimeSpan.Zero);
+
+        await repository.UpsertAsync(BuildActivity(athlete.Id, "1", startMay1), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, "2", startMay1Evening), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, "3", startMay3), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, "4", startMay7Outside), CancellationToken.None);
+
+        var deleted = BuildActivity(athlete.Id, "5", startMay4Deleted);
+        deleted.MarkDeleted(new DateTimeOffset(FixedUtcNow));
+        await repository.UpsertAsync(deleted, CancellationToken.None);
+
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        var dates = await repository.GetActiveLocalDatesAsync(
+            athlete.Id,
+            new DateOnly(2026, 5, 1),
+            new DateOnly(2026, 5, 5),
+            CancellationToken.None);
+
+        var orderedDates = dates.OrderBy(d => d).ToList();
+
+        Assert.Equal(new[] { new DateOnly(2026, 5, 1), new DateOnly(2026, 5, 3) }, orderedDates);
+    }
+
+    [Fact]
     public async Task StravaWebhookEventStore_SaveAsync_PersistsEvent()
     {
         await using var dbContext = CreateDbContext();
@@ -211,6 +249,25 @@ public sealed class PersistenceTests
             .Options;
 
         return new AppDbContext(options);
+    }
+
+    private static Activity BuildActivity(Guid athleteId, string externalId, DateTimeOffset startedAtUtc)
+    {
+        return new Activity(
+            athleteId,
+            externalId,
+            "Test Activity",
+            ActivitySport.Run,
+            distanceMeters: 5000,
+            movingTimeSeconds: 1800,
+            elapsedTimeSeconds: 1900,
+            totalElevationGainMeters: 10,
+            startedAtUtc: startedAtUtc,
+            utcOffsetAtStart: TimeSpan.Zero,
+            visibility: ActivityVisibility.Everyone,
+            deviceName: null,
+            externalMapId: null,
+            summaryPolyline: null);
     }
 
     private static Athlete CreateAthlete(string firstName)

@@ -73,6 +73,24 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
             return new PagedResult<ListActivitiesByAthleteDto>(Page, PageSize, totalCount, items);
         }
 
+        public async Task<IReadOnlyList<DateOnly>> GetActiveLocalDatesAsync(
+            Guid athleteId,
+            DateOnly fromInclusive,
+            DateOnly toInclusive,
+            CancellationToken cancellationToken)
+        {
+            return await _dbContext.Activities
+                .AsNoTracking()
+                .Where(a => a.AthleteId == athleteId
+                    && a.DeletedAtUtc == null
+                    && a.LocalDate != null
+                    && a.LocalDate >= fromInclusive
+                    && a.LocalDate <= toInclusive)
+                .Select(a => a.LocalDate!.Value)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<bool> AddAsync(Activity activity, CancellationToken cancellationToken)
         {
             await _dbContext.Activities.AddAsync(activity, cancellationToken);
