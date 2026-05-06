@@ -1,24 +1,28 @@
-﻿using MediatR;
+using MediatR;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
 using Ruig.Domain.Enums;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 {
-    public sealed class CompleteStravaOAuthHandler : IRequestHandler<CompleteStravaOAuthCommand, Guid>
+    public sealed class CompleteStravaOAuthHandler : IRequestHandler<CompleteStravaOAuthCommand, CompleteStravaOAuthResult>
     {
+        private const int SlugUniquenessAttempts = 5;
+
         private readonly IStravaAuthClient _authClient;
         private readonly IStravaApiClient _apiClient;
         private readonly IStravaTokenStore _tokenStore;
         private readonly IStravaOAuthStateStore _stateStore;
         private readonly IStravaActivitySyncService _activitySyncService;
         private readonly IAthleteRepository _athleteRepository;
+        private readonly IBadgeRepository _badgeRepository;
+        private readonly IBadgeSlugGenerator _badgeSlugGenerator;
 
         public CompleteStravaOAuthHandler(
             IStravaAuthClient authClient,
@@ -26,7 +30,9 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
             IStravaTokenStore tokenStore,
             IStravaOAuthStateStore stateStore,
             IStravaActivitySyncService activitySyncService,
-            IAthleteRepository athleteRepository)
+            IAthleteRepository athleteRepository,
+            IBadgeRepository badgeRepository,
+            IBadgeSlugGenerator badgeSlugGenerator)
         {
             _authClient = authClient;
             _apiClient = apiClient;
@@ -34,9 +40,11 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
             _stateStore = stateStore;
             _activitySyncService = activitySyncService;
             _athleteRepository = athleteRepository;
+            _badgeRepository = badgeRepository;
+            _badgeSlugGenerator = badgeSlugGenerator;
         }
 
-        public async Task<Guid> Handle(CompleteStravaOAuthCommand request, CancellationToken cancellationToken)
+        public async Task<CompleteStravaOAuthResult> Handle(CompleteStravaOAuthCommand request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Code))
                 throw new ArgumentException("OAuth code is required", nameof(request.Code));
@@ -44,8 +52,8 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
             if (string.IsNullOrWhiteSpace(request.State))
                 throw new ArgumentException("OAuth state is required", nameof(request.State));
 
-            var stateIsValid = await _stateStore.ConsumeAsync(request.State, cancellationToken);
-            if (!stateIsValid)
+            var stateData = await _stateStore.ConsumeAsync(request.State, cancellationToken);
+            if (stateData is null)
                 throw new InvalidOperationException("OAuth state is invalid or expired");
 
             var token = await _authClient.ExchangeCodeAsync(request.Code, cancellationToken);
@@ -58,7 +66,7 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 
             Guid athleteId;
 
-            if(existing is null)
+            if (existing is null)
             {
                 athleteId = athlete.Id;
                 await _athleteRepository.AddAsync(athlete, cancellationToken);
@@ -82,7 +90,44 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 
             await _activitySyncService.InitialBackfillAsync(athleteId, cancellationToken);
 
-            return athleteId;
+            var badgeSlug = await EnsureBadgeAsync(athleteId, stateData.GitHubUsername, cancellationToken);
+
+            return new CompleteStravaOAuthResult(athleteId, stateData.GitHubUsername, badgeSlug);
+        }
+
+        private async Task<string> EnsureBadgeAsync(Guid athleteId, string gitHubUsername, CancellationToken cancellationToken)
+        {
+            var existing = await _badgeRepository.GetByAthleteIdAsync(athleteId, cancellationToken);
+
+            if (existing is not null)
+            {
+                if (!string.Equals(existing.GitHubUsername, gitHubUsername, StringComparison.OrdinalIgnoreCase))
+                    existing.UpdateGitHubUsername(gitHubUsername);
+
+                if (!existing.IsEnabled)
+                    existing.Enable();
+
+                await _badgeRepository.SaveChangesAsync(cancellationToken);
+                return existing.Slug;
+            }
+
+            string slug;
+            for (var attempt = 0; ; attempt++)
+            {
+                slug = _badgeSlugGenerator.Generate();
+
+                if (!await _badgeRepository.SlugExistsAsync(slug, cancellationToken))
+                    break;
+
+                if (attempt >= SlugUniquenessAttempts)
+                    throw new InvalidOperationException("Could not generate a unique badge slug.");
+            }
+
+            var badge = new Badge(athleteId, slug, gitHubUsername);
+            await _badgeRepository.AddAsync(badge, cancellationToken);
+            await _badgeRepository.SaveChangesAsync(cancellationToken);
+
+            return slug;
         }
 
         private static Athlete MapToDomain(StravaAthleteResponse dto)
@@ -115,7 +160,7 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 
         private static DateTime? ParseStravaDate(string? value)
         {
-            if(string.IsNullOrWhiteSpace(value)) return null;
+            if (string.IsNullOrWhiteSpace(value)) return null;
 
             if (DateTime.TryParse(
                 value,

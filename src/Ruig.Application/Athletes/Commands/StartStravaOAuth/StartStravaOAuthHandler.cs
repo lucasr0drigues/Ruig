@@ -1,9 +1,9 @@
-﻿using MediatR;
+using MediatR;
 using Ruig.Application.Common.Interfaces.Strava;
 using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ruig.Application.Athletes.Commands.StartStravaOAuth
 {
@@ -23,7 +23,12 @@ namespace Ruig.Application.Athletes.Commands.StartStravaOAuth
         public async Task<StartStravaOAuthResult> Handle(StartStravaOAuthCommand request, CancellationToken cancellationToken)
         {
             var state = CreateState();
-            await _stateStore.StoreAsync(state, StateTtl, cancellationToken);
+
+            await _stateStore.StoreAsync(
+                state,
+                new StravaOAuthStateData(request.GitHubUsername),
+                StateTtl,
+                cancellationToken);
 
             var url = _authClient.BuildAuthorizeUrl(state);
 

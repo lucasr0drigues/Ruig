@@ -15,6 +15,16 @@ public sealed class AuthControllerContractTests
     }
 
     [Fact]
+    public void Start_RequiresGitHubUsernameQueryParameter()
+    {
+        var method = typeof(AuthController).GetMethod(nameof(AuthController.Start));
+        var parameters = method?.GetParameters();
+
+        Assert.NotNull(parameters);
+        Assert.Contains(parameters, p => p.Name == "githubUsername" && p.GetCustomAttribute<FromQueryAttribute>() is not null);
+    }
+
+    [Fact]
     public void Callback_RequiresCodeAndStateQueryParameters()
     {
         var method = typeof(AuthController).GetMethod(nameof(AuthController.Callback));

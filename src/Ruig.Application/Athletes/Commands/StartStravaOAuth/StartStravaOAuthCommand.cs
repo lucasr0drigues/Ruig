@@ -1,9 +1,6 @@
-﻿using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using MediatR;
 
 namespace Ruig.Application.Athletes.Commands.StartStravaOAuth
 {
-    public sealed record StartStravaOAuthCommand() : IRequest<StartStravaOAuthResult>;
+    public sealed record StartStravaOAuthCommand(string GitHubUsername) : IRequest<StartStravaOAuthResult>;
 }
