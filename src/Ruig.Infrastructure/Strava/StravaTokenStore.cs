@@ -107,6 +107,16 @@ namespace Ruig.Infrastructure.Strava
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<Guid>> ListActiveAthleteIdsAsync(CancellationToken cancellationToken)
+        {
+            return await _dbContext.StravaTokens
+                .AsNoTracking()
+                .Where(t => t.RevokedAtUtc == null)
+                .OrderBy(t => t.AthleteId)
+                .Select(t => t.AthleteId)
+                .ToListAsync(cancellationToken);
+        }
+
         private DateTimeOffset GetUtcNow()
         {
             var utcNow = _dateTimeProvider.UtcNow.Kind == DateTimeKind.Utc

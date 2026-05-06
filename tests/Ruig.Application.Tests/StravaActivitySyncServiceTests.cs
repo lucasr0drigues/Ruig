@@ -125,6 +125,11 @@ public sealed class StravaActivitySyncServiceTests
         {
             throw new NotSupportedException();
         }
+
+        public Task<IReadOnlyList<Guid>> ListActiveAthleteIdsAsync(CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeStravaApiClient : IStravaApiClient

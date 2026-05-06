@@ -127,6 +127,60 @@ public sealed class PersistenceTests
     }
 
     [Fact]
+    public async Task StravaTokenStore_ListActiveAthleteIdsAsync_ExcludesRevokedTokens()
+    {
+        await using var dbContext = CreateDbContext();
+        var activeAthlete = CreateAthlete(firstName: "Active");
+        var revokedAthlete = new Athlete(
+            "456",
+            "revoked",
+            "Revoked",
+            "Test",
+            null,
+            null,
+            null,
+            null,
+            Sex.M,
+            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            "medium",
+            "profile");
+
+        dbContext.Athletes.AddRange(activeAthlete, revokedAthlete);
+        await dbContext.SaveChangesAsync();
+
+        var store = new StravaTokenStore(
+            dbContext,
+            new FakeStravaAuthClient(),
+            new FakeDateTimeProvider(FixedUtcNow));
+
+        await store.SaveOrUpdateAsync(
+            activeAthlete.Id,
+            123,
+            "active-access",
+            "active-refresh",
+            new DateTimeOffset(FixedUtcNow).AddHours(1),
+            "read,activity:read",
+            CancellationToken.None);
+
+        await store.SaveOrUpdateAsync(
+            revokedAthlete.Id,
+            456,
+            "revoked-access",
+            "revoked-refresh",
+            new DateTimeOffset(FixedUtcNow).AddHours(1),
+            "read,activity:read",
+            CancellationToken.None);
+
+        await store.RevokeByStravaAthleteIdAsync(456, new DateTimeOffset(FixedUtcNow), CancellationToken.None);
+
+        var activeAthleteIds = await store.ListActiveAthleteIdsAsync(CancellationToken.None);
+
+        Assert.Single(activeAthleteIds);
+        Assert.Equal(activeAthlete.Id, activeAthleteIds[0]);
+    }
+
+    [Fact]
     public async Task StravaWebhookEventStore_SaveAsync_PersistsEvent()
     {
         await using var dbContext = CreateDbContext();

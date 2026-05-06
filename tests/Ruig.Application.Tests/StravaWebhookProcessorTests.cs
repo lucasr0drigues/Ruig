@@ -195,6 +195,11 @@ public sealed class StravaWebhookProcessorTests
             RevokedAtUtc = revokedAtUtc;
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<Guid>> ListActiveAthleteIdsAsync(CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeDateTimeProvider : IDateTimeProvider

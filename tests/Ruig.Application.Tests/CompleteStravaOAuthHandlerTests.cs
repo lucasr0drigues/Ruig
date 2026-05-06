@@ -192,6 +192,11 @@ public sealed class CompleteStravaOAuthHandlerTests
         {
             throw new NotSupportedException();
         }
+
+        public Task<IReadOnlyList<Guid>> ListActiveAthleteIdsAsync(CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FakeOAuthStateStore : IStravaOAuthStateStore
