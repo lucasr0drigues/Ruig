@@ -12,3 +12,23 @@ GET {{Ruig.Api_HttpsAddress}}/auth/strava/callback?code={{strava_code}}&state={{
 Accept: application/json
 
 ###
+
+GET {{Ruig.Api_HostAddress}}/webhooks/strava?hub.mode=subscribe&hub.verify_token=ruig-dev-webhook-token&hub.challenge=test-challenge
+Accept: application/json
+
+###
+
+POST {{Ruig.Api_HostAddress}}/webhooks/strava
+Content-Type: application/json
+
+{
+  "object_type": "activity",
+  "object_id": 987,
+  "aspect_type": "create",
+  "owner_id": 123,
+  "subscription_id": 456,
+  "event_time": 1800000000,
+  "updates": {}
+}
+
+###

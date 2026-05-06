@@ -14,6 +14,7 @@ namespace Ruig.Infrastructure.Common.Persistance
         public DbSet<Athlete> Athletes => Set<Athlete>();
         public DbSet<Activity> Activities => Set<Activity>();
         public DbSet<StravaToken> StravaTokens => Set<StravaToken>();
+        public DbSet<StravaWebhookEvent> StravaWebhookEvents => Set<StravaWebhookEvent>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -98,6 +98,30 @@ public sealed class PersistenceTests
         Assert.Equal(1_900_000_000, await dbContext.StravaTokens.Select(t => t.ExpiresAtUtc.ToUnixTimeSeconds()).SingleAsync());
     }
 
+    [Fact]
+    public async Task StravaWebhookEventStore_SaveAsync_PersistsEvent()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new StravaWebhookEventStore(dbContext, new FakeDateTimeProvider(FixedUtcNow));
+
+        await store.SaveAsync(
+            new StravaWebhookEventMessage(
+                "activity",
+                987,
+                "create",
+                123,
+                456,
+                1_800_000_000,
+                new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        var savedEvent = await dbContext.StravaWebhookEvents.SingleAsync();
+        Assert.Equal("activity", savedEvent.ObjectType);
+        Assert.Equal(987, savedEvent.ObjectId);
+        Assert.Equal("create", savedEvent.AspectType);
+        Assert.Equal(new DateTimeOffset(FixedUtcNow), savedEvent.ReceivedAtUtc);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

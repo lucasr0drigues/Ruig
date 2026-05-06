@@ -14,5 +14,6 @@ namespace Ruig.Infrastructure.Strava
         public string AuthorizeBaseUrl { get; init; } = "https://www.strava.com/oauth/authorize";
         public string TokenUrl { get; init; } = "https://www.strava.com/oauth/token";
         public string ApiBaseUrl { get; init; } = "https://www.strava.com/api/v3";
+        public string WebhookVerifyToken { get; init; } = string.Empty;
     }
 }
