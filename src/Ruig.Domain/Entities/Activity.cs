@@ -63,7 +63,7 @@ namespace Ruig.Domain.Entities
             Visibility = visibility;
             DeviceName = deviceName;
 
-            Map = summaryPolyline is null ? null : ActivityMap.Create(externalMapId, summaryPolyline);
+            Map = string.IsNullOrWhiteSpace(summaryPolyline) ? null : ActivityMap.Create(externalMapId, summaryPolyline);
         }
 
         public void MarkDeleted(DateTimeOffset deletedAtUtc)

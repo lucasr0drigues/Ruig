@@ -1,6 +1,15 @@
 (function () {
   "use strict";
 
+  // ---------- State -------------------------------------------------------
+
+  const state = {
+    themes: [],
+    accents: [],
+    selectedTheme: "purple",
+    selectedAccent: "strava"
+  };
+
   // ---------- Sample heatmap preview --------------------------------------
 
   const PREVIEW_WEEKS = 26;
@@ -8,9 +17,6 @@
   const GAP = 3;
   const STRIDE = CELL + GAP;
   const PADDING = 12;
-
-  const FILL = ["#1b1b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
-  const STRAVA = "#fc4c02";
 
   function mulberry32(seed) {
     return function () {
@@ -22,22 +28,32 @@
     };
   }
 
+  function currentPalette() {
+    const found = state.themes.find(t => t.key === state.selectedTheme);
+    return found ? found.levels : ["#26262e", "#4c1d95", "#7c3aed", "#a78bfa", "#c4b5fd"];
+  }
+
+  function currentAccentColor() {
+    const found = state.accents.find(a => a.key === state.selectedAccent);
+    return found ? found.color : "#fc4c02";
+  }
+
   function buildPreviewSvg() {
     const random = mulberry32(20260507);
+    const palette = currentPalette();
+    const stravaColor = currentAccentColor();
+
     const width = PADDING * 2 + PREVIEW_WEEKS * STRIDE - GAP;
     const height = PADDING * 2 + 7 * STRIDE - GAP;
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Sample heatmap preview">`;
 
     for (let w = 0; w < PREVIEW_WEEKS; w++) {
-      // Mild "ramp up over time" effect so it feels lived-in.
       const trend = w / PREVIEW_WEEKS;
-
       for (let d = 0; d < 7; d++) {
         const x = PADDING + w * STRIDE;
         const y = PADDING + d * STRIDE;
 
-        // Weekends are quieter; weekdays louder.
         const weekday = d > 0 && d < 6 ? 1 : 0.55;
         const r = random();
         const score = r * weekday + trend * 0.4;
@@ -50,9 +66,9 @@
 
         const hasStrava = random() < (d === 6 ? 0.55 : d === 0 ? 0.35 : 0.16);
 
-        svg += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" ry="2" fill="${FILL[level]}"`;
+        svg += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" ry="2" fill="${palette[level]}"`;
         if (hasStrava) {
-          svg += ` stroke="${STRAVA}" stroke-width="1.5"`;
+          svg += ` stroke="${stravaColor}" stroke-width="1.5"`;
         }
         svg += "/>";
       }
@@ -67,11 +83,109 @@
     if (mount) mount.innerHTML = buildPreviewSvg();
   }
 
+  function syncLegendDots() {
+    const palette = currentPalette();
+    document.querySelectorAll(".legend .dot-l0").forEach(el => el.style.background = palette[0]);
+    document.querySelectorAll(".legend .dot-l1").forEach(el => el.style.background = palette[1]);
+    document.querySelectorAll(".legend .dot-l2").forEach(el => el.style.background = palette[2]);
+    document.querySelectorAll(".legend .dot-l3").forEach(el => el.style.background = palette[3]);
+    document.querySelectorAll(".legend .dot-l4").forEach(el => el.style.background = palette[4]);
+    document.querySelectorAll(".legend .dot-strava").forEach(el => el.style.borderColor = currentAccentColor());
+  }
+
+  // ---------- Style catalog -----------------------------------------------
+
+  async function loadStyles() {
+    try {
+      const response = await fetch("/badges/styles", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("style fetch failed");
+      const data = await response.json();
+      state.themes = data.themes || [];
+      state.accents = data.accents || [];
+    } catch (_) {
+      // Fallback to defaults if the endpoint is unreachable.
+      state.themes = [{ key: "purple", label: "Obsidian violet", levels: currentPalette() }];
+      state.accents = [{ key: "strava", label: "Strava orange", color: currentAccentColor() }];
+    }
+
+    renderThemeSwatches();
+    renderAccentSwatches();
+    selectTheme(state.selectedTheme);
+    selectAccent(state.selectedAccent);
+  }
+
+  function renderThemeSwatches() {
+    const container = document.getElementById("theme-swatches");
+    if (!container) return;
+    container.innerHTML = "";
+
+    state.themes.forEach(theme => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "swatch swatch-theme";
+      button.dataset.themeKey = theme.key;
+      button.setAttribute("role", "radio");
+      button.setAttribute("aria-checked", String(theme.key === state.selectedTheme));
+      button.title = theme.label;
+
+      const stops = theme.levels.map((color, i) =>
+        `<span class="swatch-cell" style="background:${color}"></span>`
+      ).join("");
+      button.innerHTML = `<span class="swatch-strip">${stops}</span><span class="swatch-name">${theme.label}</span>`;
+
+      button.addEventListener("click", () => selectTheme(theme.key));
+      container.appendChild(button);
+    });
+  }
+
+  function renderAccentSwatches() {
+    const container = document.getElementById("accent-swatches");
+    if (!container) return;
+    container.innerHTML = "";
+
+    state.accents.forEach(accent => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "swatch swatch-accent";
+      button.dataset.accentKey = accent.key;
+      button.setAttribute("role", "radio");
+      button.setAttribute("aria-checked", String(accent.key === state.selectedAccent));
+      button.title = accent.label;
+      button.innerHTML = `<span class="swatch-ring" style="border-color:${accent.color}"></span><span class="swatch-name">${accent.label}</span>`;
+      button.addEventListener("click", () => selectAccent(accent.key));
+      container.appendChild(button);
+    });
+  }
+
+  function selectTheme(key) {
+    state.selectedTheme = key;
+    document.getElementById("selected-theme").value = key;
+    document.querySelectorAll(".swatch-theme").forEach(el => {
+      const active = el.dataset.themeKey === key;
+      el.classList.toggle("is-selected", active);
+      el.setAttribute("aria-checked", String(active));
+    });
+    mountPreview();
+    syncLegendDots();
+  }
+
+  function selectAccent(key) {
+    state.selectedAccent = key;
+    document.getElementById("selected-accent").value = key;
+    document.querySelectorAll(".swatch-accent").forEach(el => {
+      const active = el.dataset.accentKey === key;
+      el.classList.toggle("is-selected", active);
+      el.setAttribute("aria-checked", String(active));
+    });
+    mountPreview();
+    syncLegendDots();
+  }
+
   // ---------- Error banner from ?error= query -----------------------------
 
   const errorMessages = {
-    "invalid-state":      "Your authorisation link expired. Please try again.",
-    "connection-failed":  "We could not finish connecting to Strava. Please try again."
+    "invalid-state": "Your authorisation link expired. Please try again.",
+    "connection-failed": "We could not finish connecting to Strava. Please try again."
   };
 
   function showInlineErrorFromQuery() {
@@ -85,7 +199,6 @@
     banner.textContent = errorMessages[code] || "Something went wrong. Please try again.";
     banner.hidden = false;
 
-    // Clean the URL so a refresh doesn't keep showing the error.
     history.replaceState({}, "", window.location.pathname);
   }
 
@@ -130,10 +243,14 @@
       submitBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>Connecting…</span>';
 
       try {
-        const response = await fetch(
-          "/auth/strava/start?githubUsername=" + encodeURIComponent(username),
-          { headers: { "Accept": "application/json" } }
-        );
+        const params = new URLSearchParams({
+          githubUsername: username,
+          theme: state.selectedTheme,
+          accent: state.selectedAccent
+        });
+        const response = await fetch("/auth/strava/start?" + params.toString(), {
+          headers: { "Accept": "application/json" }
+        });
 
         if (!response.ok) {
           let message = "Could not start the Strava connection.";
@@ -160,7 +277,9 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     mountPreview();
+    syncLegendDots();
     showInlineErrorFromQuery();
     bindForm();
+    loadStyles();
   });
 })();

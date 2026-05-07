@@ -59,6 +59,24 @@
             aria-describedby="form-error"
           />
         </div>
+        <fieldset class="picker" aria-label="Choose your colours">
+          <legend class="form-label">Colours</legend>
+          <div class="picker-row">
+            <span class="picker-label">Heatmap</span>
+            <div class="swatches" id="theme-swatches" role="radiogroup" aria-label="Heatmap palette">
+              <span class="swatch-loading">Loading…</span>
+            </div>
+          </div>
+          <div class="picker-row">
+            <span class="picker-label">Activity ring</span>
+            <div class="swatches" id="accent-swatches" role="radiogroup" aria-label="Strava activity ring colour">
+              <span class="swatch-loading">Loading…</span>
+            </div>
+          </div>
+          <input type="hidden" id="selected-theme" name="theme" value="purple" />
+          <input type="hidden" id="selected-accent" name="accent" value="strava" />
+        </fieldset>
+
         <p id="form-error" class="form-error" role="alert" hidden></p>
         <button type="submit" class="btn btn-strava" id="submit-btn">
           <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">

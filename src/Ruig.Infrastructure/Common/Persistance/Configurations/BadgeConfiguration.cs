@@ -40,6 +40,14 @@ namespace Ruig.Infrastructure.Common.Persistance.Configurations
             builder.Property(b => b.IsEnabled)
                 .IsRequired();
 
+            builder.Property(b => b.Theme)
+                .IsRequired()
+                .HasMaxLength(32);
+
+            builder.Property(b => b.AccentColor)
+                .IsRequired()
+                .HasMaxLength(32);
+
             builder.Property(b => b.CreatedAt)
                 .IsRequired();
 

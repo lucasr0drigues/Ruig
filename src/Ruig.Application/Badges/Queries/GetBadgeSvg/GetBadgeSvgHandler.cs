@@ -43,7 +43,10 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
                 new GetHeatmapQuery(badge.GitHubUsername, badge.AthleteId, from, to),
                 cancellationToken);
 
-            var svg = _renderer.Render(heatmap);
+            var theme = request.ThemeOverride ?? badge.Theme;
+            var accent = request.AccentOverride ?? badge.AccentColor;
+
+            var svg = _renderer.Render(new BadgeRenderRequest(heatmap, badge.GitHubUsername, theme, accent));
 
             return new GetBadgeSvgResult(badge.Slug, svg, from, to, new DateTimeOffset(nowUtc));
         }

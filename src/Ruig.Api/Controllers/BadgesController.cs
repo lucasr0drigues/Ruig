@@ -19,13 +19,17 @@ namespace Ruig.Api.Controllers
 
         [HttpGet("{slug}.svg")]
         [Produces("image/svg+xml")]
-        public async Task<IActionResult> GetBadge([FromRoute] string slug, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetBadge(
+            [FromRoute] string slug,
+            [FromQuery] string? theme,
+            [FromQuery] string? accent,
+            CancellationToken cancellationToken)
         {
             GetBadgeSvgResult result;
 
             try
             {
-                result = await _mediator.Send(new GetBadgeSvgQuery(slug), cancellationToken);
+                result = await _mediator.Send(new GetBadgeSvgQuery(slug, theme, accent), cancellationToken);
             }
             catch (BadgeNotFoundException)
             {

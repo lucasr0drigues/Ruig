@@ -14,7 +14,7 @@ public sealed class GetBadgeSvgHandlerTests
     public async Task Handle_RendersSvgForActiveBadgeUsingTrailingYearWindow()
     {
         var athleteId = Guid.NewGuid();
-        var badge = new Badge(athleteId, "abc123", "lucas");
+        var badge = new Badge(athleteId, "abc123", "lucas", "purple", "strava");
         var badgeRepository = new FakeBadgeRepository(badge);
         var renderer = new FakeRenderer("<svg/>");
         var dateTimeProvider = new FakeDateTimeProvider(new DateTime(2026, 5, 5, 12, 0, 0, DateTimeKind.Utc));
@@ -38,6 +38,47 @@ public sealed class GetBadgeSvgHandlerTests
     }
 
     [Fact]
+    public async Task Handle_PassesBadgeThemeAndAccentToRendererWhenNoOverrides()
+    {
+        var athleteId = Guid.NewGuid();
+        var badge = new Badge(athleteId, "abc123", "lucas", "blue", "cyan");
+        var renderer = new FakeRenderer("<svg/>");
+
+        var handler = new GetBadgeSvgHandler(
+            new FakeBadgeRepository(badge),
+            renderer,
+            new FakeDateTimeProvider(new DateTime(2026, 5, 7, 12, 0, 0, DateTimeKind.Utc)),
+            new FakeMediator(BuildHeatmap(athleteId, "lucas", new DateOnly(2025, 5, 8), new DateOnly(2026, 5, 7))));
+
+        await handler.Handle(new GetBadgeSvgQuery("abc123"), CancellationToken.None);
+
+        Assert.NotNull(renderer.LastRequest);
+        Assert.Equal("blue", renderer.LastRequest!.ThemeKey);
+        Assert.Equal("cyan", renderer.LastRequest.AccentKey);
+        Assert.Equal("lucas", renderer.LastRequest.GitHubUsername);
+    }
+
+    [Fact]
+    public async Task Handle_QueryOverridesTakePrecedence()
+    {
+        var athleteId = Guid.NewGuid();
+        var badge = new Badge(athleteId, "abc123", "lucas", "blue", "cyan");
+        var renderer = new FakeRenderer("<svg/>");
+
+        var handler = new GetBadgeSvgHandler(
+            new FakeBadgeRepository(badge),
+            renderer,
+            new FakeDateTimeProvider(new DateTime(2026, 5, 7, 12, 0, 0, DateTimeKind.Utc)),
+            new FakeMediator(BuildHeatmap(athleteId, "lucas", new DateOnly(2025, 5, 8), new DateOnly(2026, 5, 7))));
+
+        await handler.Handle(new GetBadgeSvgQuery("abc123", ThemeOverride: "amber", AccentOverride: "magenta"), CancellationToken.None);
+
+        Assert.NotNull(renderer.LastRequest);
+        Assert.Equal("amber", renderer.LastRequest!.ThemeKey);
+        Assert.Equal("magenta", renderer.LastRequest.AccentKey);
+    }
+
+    [Fact]
     public async Task Handle_ThrowsBadgeNotFoundWhenSlugUnknown()
     {
         var handler = new GetBadgeSvgHandler(
@@ -53,7 +94,7 @@ public sealed class GetBadgeSvgHandlerTests
     [Fact]
     public async Task Handle_ThrowsBadgeNotFoundWhenBadgeDisabled()
     {
-        var badge = new Badge(Guid.NewGuid(), "abc123", "lucas");
+        var badge = new Badge(Guid.NewGuid(), "abc123", "lucas", "purple", "strava");
         badge.Disable();
 
         var handler = new GetBadgeSvgHandler(
@@ -112,7 +153,13 @@ public sealed class GetBadgeSvgHandlerTests
             _svg = svg;
         }
 
-        public string Render(Heatmap heatmap) => _svg;
+        public BadgeRenderRequest? LastRequest { get; private set; }
+
+        public string Render(BadgeRenderRequest request)
+        {
+            LastRequest = request;
+            return _svg;
+        }
     }
 
     private sealed class FakeDateTimeProvider : IDateTimeProvider
