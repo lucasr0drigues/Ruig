@@ -3,13 +3,16 @@
 
   const DEFAULT_THEME = "purple";
   const DEFAULT_ACCENT = "strava";
+  const DEFAULT_BACKGROUND = "slate";
 
   const state = {
     slug: null,
     selectedTheme: DEFAULT_THEME,
     selectedAccent: DEFAULT_ACCENT,
+    selectedBackground: DEFAULT_BACKGROUND,
     themes: [],
-    accents: []
+    accents: [],
+    backgrounds: []
   };
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -50,15 +53,21 @@
     return "ruig:badge:" + state.slug + ":style";
   }
 
+  function isAllDefault() {
+    return state.selectedTheme === DEFAULT_THEME
+        && state.selectedAccent === DEFAULT_ACCENT
+        && state.selectedBackground === DEFAULT_BACKGROUND;
+  }
+
   function persistSelection() {
     try {
-      const isDefault = state.selectedTheme === DEFAULT_THEME && state.selectedAccent === DEFAULT_ACCENT;
-      if (isDefault) {
+      if (isAllDefault()) {
         localStorage.removeItem(storageKey());
       } else {
         localStorage.setItem(storageKey(), JSON.stringify({
           theme: state.selectedTheme,
-          accent: state.selectedAccent
+          accent: state.selectedAccent,
+          background: state.selectedBackground
         }));
       }
     } catch (_) { /* ignore quota / private mode */ }
@@ -71,6 +80,7 @@
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.theme === "string") state.selectedTheme = parsed.theme;
       if (parsed && typeof parsed.accent === "string") state.selectedAccent = parsed.accent;
+      if (parsed && typeof parsed.background === "string") state.selectedBackground = parsed.background;
     } catch (_) { /* ignore */ }
   }
 
@@ -84,6 +94,9 @@
     }
     if (state.selectedAccent && state.selectedAccent !== DEFAULT_ACCENT) {
       params.set("accent", state.selectedAccent);
+    }
+    if (state.selectedBackground && state.selectedBackground !== DEFAULT_BACKGROUND) {
+      params.set("bg", state.selectedBackground);
     }
     const qs = params.toString();
     if (qs) path += "?" + qs;
@@ -112,10 +125,12 @@
       const data = await response.json();
       state.themes = data.themes || [];
       state.accents = data.accents || [];
+      state.backgrounds = data.backgrounds || [];
     } catch (_) { return; }
 
     renderThemeSwatches();
     renderAccentSwatches();
+    renderBackgroundSwatches();
   }
 
   function renderThemeSwatches() {
@@ -129,7 +144,9 @@
       button.dataset.themeKey = theme.key;
       button.title = theme.label;
       button.setAttribute("role", "radio");
-      const stops = theme.levels.map(c => `<span class="swatch-cell" style="background:${c}"></span>`).join("");
+      // Use only L1..L4 in the strip preview so the empty-cell colour doesn't
+      // mislead users about the theme — the theme is just the active ramp.
+      const stops = theme.levels.slice(1).map(c => `<span class="swatch-cell" style="background:${c}"></span>`).join("");
       button.innerHTML = `<span class="swatch-strip">${stops}</span><span class="swatch-name">${theme.label}</span>`;
       button.addEventListener("click", () => selectTheme(theme.key));
       container.appendChild(button);
@@ -155,6 +172,31 @@
     syncAccentSelection();
   }
 
+  function renderBackgroundSwatches() {
+    const container = document.getElementById("background-swatches");
+    if (!container) return;
+    container.innerHTML = "";
+    state.backgrounds.forEach(background => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "swatch swatch-background";
+      button.dataset.bgKey = background.key;
+      button.title = background.label;
+      button.setAttribute("role", "radio");
+
+      let chip;
+      if (background.color === "none" || background.key === "transparent") {
+        chip = `<span class="swatch-fill swatch-fill-transparent" aria-hidden="true"></span>`;
+      } else {
+        chip = `<span class="swatch-fill" style="background:${background.color}" aria-hidden="true"></span>`;
+      }
+      button.innerHTML = `${chip}<span class="swatch-name">${background.label}</span>`;
+      button.addEventListener("click", () => selectBackground(background.key));
+      container.appendChild(button);
+    });
+    syncBackgroundSelection();
+  }
+
   function selectTheme(key) {
     state.selectedTheme = key;
     syncThemeSelection();
@@ -165,6 +207,13 @@
   function selectAccent(key) {
     state.selectedAccent = key;
     syncAccentSelection();
+    persistSelection();
+    refreshSnippets();
+  }
+
+  function selectBackground(key) {
+    state.selectedBackground = key;
+    syncBackgroundSelection();
     persistSelection();
     refreshSnippets();
   }
@@ -185,6 +234,14 @@
     });
   }
 
+  function syncBackgroundSelection() {
+    document.querySelectorAll(".swatch-background").forEach(el => {
+      const active = el.dataset.bgKey === state.selectedBackground;
+      el.classList.toggle("is-selected", active);
+      el.setAttribute("aria-checked", String(active));
+    });
+  }
+
   // ---------- Reset -------------------------------------------------------
 
   function bindResetButton() {
@@ -193,8 +250,10 @@
     btn.addEventListener("click", function () {
       state.selectedTheme = DEFAULT_THEME;
       state.selectedAccent = DEFAULT_ACCENT;
+      state.selectedBackground = DEFAULT_BACKGROUND;
       syncThemeSelection();
       syncAccentSelection();
+      syncBackgroundSelection();
       persistSelection();
       refreshSnippets();
     });

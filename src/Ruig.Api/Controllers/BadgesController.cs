@@ -23,13 +23,14 @@ namespace Ruig.Api.Controllers
             [FromRoute] string slug,
             [FromQuery] string? theme,
             [FromQuery] string? accent,
+            [FromQuery] string? bg,
             CancellationToken cancellationToken)
         {
             GetBadgeSvgResult result;
 
             try
             {
-                result = await _mediator.Send(new GetBadgeSvgQuery(slug, theme, accent), cancellationToken);
+                result = await _mediator.Send(new GetBadgeSvgQuery(slug, theme, accent, bg), cancellationToken);
             }
             catch (BadgeNotFoundException)
             {

@@ -1,5 +1,6 @@
 using Ruig.Application.Badges;
 using Ruig.Application.Common.Interfaces;
+using Ruig.Application.Common.Interfaces.GitHub.Models;
 using Ruig.Application.Heatmaps.Models;
 using System;
 using System.Collections.Generic;
@@ -20,9 +21,22 @@ namespace Ruig.Infrastructure.Badges
         private const int CornerRadius = 2;
         private const float StravaStrokeWidth = 1.5f;
 
+        // Space reserved for axis labels.
+        private const int LeftLabelWidth = 24;       // weekday labels (Mon/Wed/Fri)
+        private const int TopLabelHeight = 16;       // month labels
+        private const int MonthLabelMinGapPx = 32;   // skip labels that would crowd the previous one
+
         private const string TextColor = "#a8a8b3";
         private const string TextStrong = "#e8e8ec";
         private const string FontStack = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+        // Indexed by 1-based month number (index 0 unused).
+        private static readonly string[] MonthAbbreviations =
+        {
+            string.Empty,
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        };
 
         public string Render(BadgeRenderRequest request)
         {
@@ -32,6 +46,8 @@ namespace Ruig.Infrastructure.Badges
 
             var palette = BadgeStyleCatalog.ResolveTheme(request.ThemeKey);
             var accent = BadgeStyleCatalog.ResolveAccent(request.AccentKey);
+            var background = BadgeStyleCatalog.ResolveBackground(request.BackgroundKey);
+            var emptyFill = background.Color;
 
             var gridStart = StartOfWeek(heatmap.From);
             var gridEnd = EndOfWeek(heatmap.To);
@@ -40,8 +56,12 @@ namespace Ruig.Infrastructure.Badges
 
             var gridWidth = weeks * CellStride - CellGap;
             var gridHeight = 7 * CellStride - CellGap;
-            var width = Padding * 2 + gridWidth;
-            var height = Padding * 2 + gridHeight + FooterGap + FooterHeight;
+
+            var gridOriginX = Padding + LeftLabelWidth;
+            var gridOriginY = Padding + TopLabelHeight;
+
+            var width = gridOriginX + gridWidth + Padding;
+            var height = gridOriginY + gridHeight + FooterGap + FooterHeight + Padding;
 
             var sb = new StringBuilder(weeks * 7 * 80 + 1024);
 
@@ -56,22 +76,31 @@ namespace Ruig.Infrastructure.Badges
               .Append(".ruig-text{font-family:").Append(FontStack).Append(";}")
               .Append("</style>");
 
+            // Month labels (top axis).
+            AppendMonthLabels(sb, gridStart, weeks, gridOriginX, gridOriginY);
+
+            // Weekday labels (left axis: Mon, Wed, Fri).
+            AppendWeekdayLabels(sb, gridOriginX, gridOriginY);
+
+            // Cells.
             var dayLookup = BuildDayLookup(heatmap);
 
             for (var date = gridStart; date <= gridEnd; date = date.AddDays(1))
             {
                 var weekIndex = (date.DayNumber - gridStart.DayNumber) / 7;
                 var dayOfWeek = (int)date.DayOfWeek;
-                var x = Padding + weekIndex * CellStride;
-                var y = Padding + dayOfWeek * CellStride;
+                var x = gridOriginX + weekIndex * CellStride;
+                var y = gridOriginY + dayOfWeek * CellStride;
 
-                var fill = palette.LevelFills[0];
+                var fill = emptyFill;
                 var hasStrava = false;
                 var count = 0;
 
                 if (date >= heatmap.From && date <= heatmap.To && dayLookup.TryGetValue(date, out var day))
                 {
-                    fill = palette.LevelFills[(int)day.GitHubLevel];
+                    fill = day.GitHubLevel == GitHubContributionLevel.None
+                        ? emptyFill
+                        : palette.LevelFills[(int)day.GitHubLevel];
                     hasStrava = day.HasStravaActivity;
                     count = day.GitHubContributionCount;
                 }
@@ -94,7 +123,7 @@ namespace Ruig.Infrastructure.Badges
             }
 
             // Footer row: username on the left, legend on the right.
-            var footerY = Padding + gridHeight + FooterGap;
+            var footerY = gridOriginY + gridHeight + FooterGap;
             var footerTextY = footerY + 10;
             var legendCellSize = 9;
             var legendCellGap = 3;
@@ -102,7 +131,7 @@ namespace Ruig.Infrastructure.Badges
             var legendCellsCount = palette.LevelFills.Count;
 
             // Right-anchor: build legend right-to-left.
-            var rightX = Padding + gridWidth;
+            var rightX = gridOriginX + gridWidth;
 
             // Strava legend chip on the far right.
             var stravaLabel = "Strava";
@@ -133,18 +162,19 @@ namespace Ruig.Infrastructure.Badges
             for (var i = 0; i < legendCellsCount; i++)
             {
                 var x = legendCellsLeftX + i * legendCellStride;
+                var legendFill = i == 0 ? emptyFill : palette.LevelFills[i];
                 sb.Append(CultureInfo.InvariantCulture,
-                    $"<rect x=\"{x}\" y=\"{legendCellY}\" width=\"{legendCellSize}\" height=\"{legendCellSize}\" rx=\"2\" fill=\"{palette.LevelFills[i]}\"/>");
+                    $"<rect x=\"{x}\" y=\"{legendCellY}\" width=\"{legendCellSize}\" height=\"{legendCellSize}\" rx=\"2\" fill=\"{legendFill}\"/>");
             }
 
             var lessX = legendCellsLeftX - 6;
             sb.Append(CultureInfo.InvariantCulture,
                 $"<text class=\"ruig-text\" x=\"{lessX}\" y=\"{footerTextY}\" text-anchor=\"end\" font-size=\"10\" fill=\"{TextColor}\">Less</text>");
 
-            // Username on the left of the footer (anti-theft signature).
-            var displayName = TruncateForFooter(request.GitHubUsername, lessX - ApproxTextWidth("Less") - Padding - 8);
+            // Username on the left of the footer (anti-theft signature), aligned with the grid.
+            var displayName = TruncateForFooter(request.GitHubUsername, lessX - ApproxTextWidth("Less") - gridOriginX - 8);
             sb.Append(CultureInfo.InvariantCulture,
-                $"<text class=\"ruig-text\" x=\"{Padding}\" y=\"{footerTextY}\" font-size=\"11\" fill=\"{TextStrong}\" font-weight=\"600\">")
+                $"<text class=\"ruig-text\" x=\"{gridOriginX}\" y=\"{footerTextY}\" font-size=\"11\" fill=\"{TextStrong}\" font-weight=\"600\">")
               .Append("GitHub: ")
               .Append("<tspan font-weight=\"400\" fill=\"")
               .Append(TextColor)
@@ -156,6 +186,67 @@ namespace Ruig.Infrastructure.Badges
             sb.Append("</svg>");
 
             return sb.ToString();
+        }
+
+        private static void AppendMonthLabels(StringBuilder sb, DateOnly gridStart, int weeks, int gridOriginX, int gridOriginY)
+        {
+            // Month label baseline — sits just above the grid.
+            var labelY = gridOriginY - 5;
+            var lastLabelMonth = -1;
+            int? lastLabelX = null;
+
+            for (var w = 0; w < weeks; w++)
+            {
+                var weekFirstDay = gridStart.AddDays(w * 7);
+                var weekLastDay = weekFirstDay.AddDays(6);
+
+                // The label belongs to the column where the new month "starts" (the
+                // first week whose last day is in a different month than the previous week's).
+                var month = weekLastDay.Month;
+                if (month == lastLabelMonth) continue;
+
+                lastLabelMonth = month;
+
+                var x = gridOriginX + w * CellStride;
+
+                // Skip labels that would crowd the previous one.
+                if (lastLabelX is int prevX && x - prevX < MonthLabelMinGapPx) continue;
+                lastLabelX = x;
+
+                var monthName = MonthAbbreviations[month];
+
+                sb.Append(CultureInfo.InvariantCulture,
+                    $"<text class=\"ruig-text\" x=\"{x}\" y=\"{labelY}\" font-size=\"10\" fill=\"{TextColor}\">")
+                  .Append(monthName)
+                  .Append("</text>");
+            }
+        }
+
+        private static void AppendWeekdayLabels(StringBuilder sb, int gridOriginX, int gridOriginY)
+        {
+            // GitHub-style: only show Mon, Wed, Fri.
+            // DayOfWeek: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6
+            var entries = new (string Label, int Row)[]
+            {
+                ("Mon", 1),
+                ("Wed", 3),
+                ("Fri", 5),
+            };
+
+            // Right-anchor the labels just to the left of the grid.
+            var labelX = gridOriginX - 4;
+
+            foreach (var (label, row) in entries)
+            {
+                var rowCenterY = gridOriginY + row * CellStride + (CellSize / 2);
+                // Tweak for visual centering with 9px font.
+                var textY = rowCenterY + 3;
+
+                sb.Append(CultureInfo.InvariantCulture,
+                    $"<text class=\"ruig-text\" x=\"{labelX}\" y=\"{textY}\" text-anchor=\"end\" font-size=\"9\" fill=\"{TextColor}\">")
+                  .Append(label)
+                  .Append("</text>");
+            }
         }
 
         private static Dictionary<DateOnly, HeatmapDay> BuildDayLookup(Heatmap heatmap)

@@ -6,5 +6,6 @@ namespace Ruig.Application.Common.Interfaces
         Heatmap Heatmap,
         string GitHubUsername,
         string ThemeKey,
-        string AccentKey);
+        string AccentKey,
+        string BackgroundKey);
 }

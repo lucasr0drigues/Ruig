@@ -8,10 +8,13 @@ namespace Ruig.Application.Badges
 
     public sealed record BadgeAccent(string Key, string Label, string Color);
 
+    public sealed record BadgeBackground(string Key, string Label, string Color);
+
     public static class BadgeStyleCatalog
     {
         public const string DefaultThemeKey = "purple";
         public const string DefaultAccentKey = "strava";
+        public const string DefaultBackgroundKey = "slate";
 
         public static readonly IReadOnlyDictionary<string, BadgePalette> Themes = new ReadOnlyDictionary<string, BadgePalette>(
             new Dictionary<string, BadgePalette>(StringComparer.OrdinalIgnoreCase)
@@ -41,6 +44,20 @@ namespace Ruig.Application.Badges
                 ["white"]   = new("white",   "White",         "#f4f4f5")
             });
 
+        // Color used for cells with no GitHub contributions. Independent from the active-ramp
+        // theme so users can pair any palette with any "empty day" colour (e.g. dark ramp on
+        // a light README, or transparent to inherit whatever background the SVG sits on).
+        public static readonly IReadOnlyDictionary<string, BadgeBackground> Backgrounds = new ReadOnlyDictionary<string, BadgeBackground>(
+            new Dictionary<string, BadgeBackground>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["slate"]       = new("slate",       "Slate",       "#26262e"),
+                ["ink"]         = new("ink",         "Ink",         "#0c0c0e"),
+                ["graphite"]    = new("graphite",    "Graphite",    "#1f1f24"),
+                ["snow"]        = new("snow",        "Snow",        "#ebedf0"),
+                ["paper"]       = new("paper",       "Paper",       "#f4f4f5"),
+                ["transparent"] = new("transparent", "Transparent", "none")
+            });
+
         public static BadgePalette ResolveTheme(string? key)
         {
             if (!string.IsNullOrWhiteSpace(key) && Themes.TryGetValue(key, out var palette))
@@ -57,10 +74,21 @@ namespace Ruig.Application.Badges
             return Accents[DefaultAccentKey];
         }
 
+        public static BadgeBackground ResolveBackground(string? key)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && Backgrounds.TryGetValue(key, out var bg))
+                return bg;
+
+            return Backgrounds[DefaultBackgroundKey];
+        }
+
         public static bool IsValidTheme(string? key)
             => !string.IsNullOrWhiteSpace(key) && Themes.ContainsKey(key);
 
         public static bool IsValidAccent(string? key)
             => !string.IsNullOrWhiteSpace(key) && Accents.ContainsKey(key);
+
+        public static bool IsValidBackground(string? key)
+            => !string.IsNullOrWhiteSpace(key) && Backgrounds.ContainsKey(key);
     }
 }

@@ -33,7 +33,18 @@ namespace Ruig.Api.Controllers
                     isDefault = kvp.Key == BadgeStyleCatalog.DefaultAccentKey
                 });
 
-            return Ok(new { themes, accents });
+            var backgrounds = BadgeStyleCatalog.Backgrounds
+                .OrderBy(kvp => kvp.Key == BadgeStyleCatalog.DefaultBackgroundKey ? 0 : 1)
+                .ThenBy(kvp => kvp.Key)
+                .Select(kvp => new
+                {
+                    key = kvp.Value.Key,
+                    label = kvp.Value.Label,
+                    color = kvp.Value.Color,
+                    isDefault = kvp.Key == BadgeStyleCatalog.DefaultBackgroundKey
+                });
+
+            return Ok(new { themes, accents, backgrounds });
         }
     }
 }
