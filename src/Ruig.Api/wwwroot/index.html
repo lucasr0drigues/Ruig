@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ruig — One badge, two kinds of work</title>
+  <meta name="description" content="Combine your GitHub contributions with your Strava activity into one heatmap badge." />
+  <meta name="color-scheme" content="dark" />
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='9' y='9' width='6' height='6' rx='1' fill='%23a78bfa' stroke='%23fc4c02' stroke-width='1.5'/></svg>" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <a class="logo" href="/" aria-label="Ruig home">
+        <svg class="logo-mark" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="0"  y="0"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.30" />
+          <rect x="9"  y="0"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.55" />
+          <rect x="18" y="0"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.85" />
+          <rect x="0"  y="9"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.55" />
+          <rect x="9"  y="9"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.95" stroke="#fc4c02" stroke-width="1.5" />
+          <rect x="18" y="9"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.40" />
+          <rect x="0"  y="18" width="6" height="6" rx="1" fill="#a78bfa" opacity="0.85" />
+          <rect x="9"  y="18" width="6" height="6" rx="1" fill="#a78bfa" opacity="0.40" />
+          <rect x="18" y="18" width="6" height="6" rx="1" fill="#a78bfa" opacity="0.70" />
+        </svg>
+        <span class="logo-text">Ruig</span>
+      </a>
+
+      <h1>One badge.<br /><span class="hero-accent">Two kinds of work.</span></h1>
+      <p class="lead">Pin a single heatmap to your README that shows the days you shipped code <em>and</em> the days you got out the door.</p>
+    </header>
+
+    <section class="card" aria-labelledby="setup-title">
+      <header class="card-head">
+        <h2 id="setup-title">Get your badge</h2>
+        <p class="sub">Two steps. No account required.</p>
+      </header>
+
+      <ol class="steps">
+        <li class="step step-active"><span class="step-num">1</span><span>Enter your GitHub username</span></li>
+        <li class="step"><span class="step-num">2</span><span>Authorise Strava</span></li>
+        <li class="step"><span class="step-num">3</span><span>Copy the badge URL</span></li>
+      </ol>
+
+      <form id="setup-form" class="form" novalidate>
+        <label for="githubUsername" class="form-label">GitHub username</label>
+        <div class="input-row">
+          <span class="input-prefix">github.com/</span>
+          <input
+            type="text"
+            id="githubUsername"
+            name="githubUsername"
+            placeholder="yourname"
+            autocomplete="off"
+            spellcheck="false"
+            autocapitalize="off"
+            required
+            aria-describedby="form-error"
+          />
+        </div>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <button type="submit" class="btn btn-strava" id="submit-btn">
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+          </svg>
+          Connect Strava
+        </button>
+        <p class="fine">Ruig only requests your <code>read,activity:read</code> scope. We never see private activities.</p>
+      </form>
+    </section>
+
+    <section class="card preview-card" aria-labelledby="preview-title">
+      <header class="card-head">
+        <h3 id="preview-title">What you'll get</h3>
+        <p class="sub">GitHub contributions colour each cell. Strava activity days get an orange ring.</p>
+      </header>
+      <div class="preview-svg-wrapper" id="preview-mount"></div>
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-label">Contributions</span>
+          <span class="dot dot-l0"></span>
+          <span class="dot dot-l1"></span>
+          <span class="dot dot-l2"></span>
+          <span class="dot dot-l3"></span>
+          <span class="dot dot-l4"></span>
+        </div>
+        <div class="legend-item">
+          <span class="dot dot-strava"></span>
+          <span>Strava activity</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Open source on <a href="https://github.com/lucasr0drigues/Ruig">GitHub</a>.</span>
+      <span class="footer-sep">·</span>
+      <span>Built with .NET 10 + Postgres.</span>
+    </footer>
+  </main>
+
+  <script src="/js/setup.js"></script>
+</body>
+</html>

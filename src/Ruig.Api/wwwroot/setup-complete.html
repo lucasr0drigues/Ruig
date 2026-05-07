@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ruig — Your badge is ready</title>
+  <meta name="color-scheme" content="dark" />
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='9' y='9' width='6' height='6' rx='1' fill='%23a78bfa' stroke='%23fc4c02' stroke-width='1.5'/></svg>" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <main class="page page-wide">
+    <header class="hero hero-compact">
+      <a class="logo" href="/" aria-label="Ruig home">
+        <svg class="logo-mark" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="0"  y="0"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.30" />
+          <rect x="9"  y="0"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.55" />
+          <rect x="18" y="0"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.85" />
+          <rect x="0"  y="9"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.55" />
+          <rect x="9"  y="9"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.95" stroke="#fc4c02" stroke-width="1.5" />
+          <rect x="18" y="9"  width="6" height="6" rx="1" fill="#a78bfa" opacity="0.40" />
+          <rect x="0"  y="18" width="6" height="6" rx="1" fill="#a78bfa" opacity="0.85" />
+          <rect x="9"  y="18" width="6" height="6" rx="1" fill="#a78bfa" opacity="0.40" />
+          <rect x="18" y="18" width="6" height="6" rx="1" fill="#a78bfa" opacity="0.70" />
+        </svg>
+        <span class="logo-text">Ruig</span>
+      </a>
+
+      <div class="check-badge" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 10.5l3.5 3.5L15 7" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+
+      <h1>Your badge is live.</h1>
+      <p class="lead">Embed it anywhere. It updates automatically as you push code and log activities.</p>
+    </header>
+
+    <section class="card preview-card" aria-labelledby="preview-title">
+      <header class="card-head">
+        <h3 id="preview-title">Live preview</h3>
+        <p class="sub">Trailing 365 days. <span id="preview-meta"></span></p>
+      </header>
+      <div class="preview-svg-wrapper">
+        <img id="badge-image" alt="Your Ruig heatmap" />
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="embed-title">
+      <header class="card-head">
+        <h3 id="embed-title">Embed it</h3>
+        <p class="sub">Drop one of these into your README and you're done.</p>
+      </header>
+
+      <div class="snippet-block">
+        <div class="snippet-head">
+          <label>Markdown</label>
+          <button class="btn btn-ghost copy" data-target="snippet-markdown" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy</span>
+          </button>
+        </div>
+        <pre id="snippet-markdown" class="snippet" tabindex="0">Loading…</pre>
+      </div>
+
+      <div class="snippet-block">
+        <div class="snippet-head">
+          <label>HTML</label>
+          <button class="btn btn-ghost copy" data-target="snippet-html" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy</span>
+          </button>
+        </div>
+        <pre id="snippet-html" class="snippet" tabindex="0">Loading…</pre>
+      </div>
+
+      <div class="snippet-block">
+        <div class="snippet-head">
+          <label>Direct URL</label>
+          <button class="btn btn-ghost copy" data-target="snippet-url" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy</span>
+          </button>
+        </div>
+        <pre id="snippet-url" class="snippet" tabindex="0">Loading…</pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <a href="/" class="footer-link">Start over</a>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/lucasr0drigues/Ruig">View source</a>
+    </footer>
+  </main>
+
+  <script src="/js/complete.js"></script>
+</body>
+</html>

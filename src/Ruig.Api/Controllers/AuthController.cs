@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Ruig.Application.Athletes.Commands.CompleteStravaOAuth;
@@ -19,27 +20,35 @@ namespace Ruig.Api.Controllers
         [HttpGet("start")]
         public async Task<ActionResult> Start([FromQuery] string githubUsername, CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(new StartStravaOAuthCommand(githubUsername), cancellationToken);
+            try
+            {
+                var result = await _mediator.Send(new StartStravaOAuthCommand(githubUsername), cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { error = "invalid-github-username", message = ex.Message });
+            }
         }
 
         [HttpGet("callback")]
         public async Task<ActionResult> Callback([FromQuery] string code, [FromQuery] string state, CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(new CompleteStravaOAuthCommand(code, state), cancellationToken);
-
-            var badgeUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/badges/{result.BadgeSlug}.svg";
-            var markdown = $"![Ruig heatmap]({badgeUrl})";
-
-            return Ok(new
+            try
             {
-                athleteId = result.AthleteId,
-                gitHubUsername = result.GitHubUsername,
-                badgeSlug = result.BadgeSlug,
-                badgeUrl,
-                markdown
-            });
+                var result = await _mediator.Send(new CompleteStravaOAuthCommand(code, state), cancellationToken);
+
+                return Redirect($"/setup-complete.html?slug={Uri.EscapeDataString(result.BadgeSlug)}");
+            }
+            catch (InvalidOperationException)
+            {
+                return Redirect("/?error=invalid-state");
+            }
+            catch (Exception)
+            {
+                return Redirect("/?error=connection-failed");
+            }
         }
     }
 }
