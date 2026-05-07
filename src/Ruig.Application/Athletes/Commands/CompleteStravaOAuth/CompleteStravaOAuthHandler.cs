@@ -93,8 +93,6 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
             var badgeSlug = await EnsureBadgeAsync(
                 athleteId,
                 stateData.GitHubUsername,
-                stateData.Theme,
-                stateData.AccentColor,
                 cancellationToken);
 
             return new CompleteStravaOAuthResult(athleteId, stateData.GitHubUsername, badgeSlug);
@@ -103,8 +101,6 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
         private async Task<string> EnsureBadgeAsync(
             Guid athleteId,
             string gitHubUsername,
-            string theme,
-            string accentColor,
             CancellationToken cancellationToken)
         {
             var existing = await _badgeRepository.GetByAthleteIdAsync(athleteId, cancellationToken);
@@ -113,12 +109,6 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
             {
                 if (!string.Equals(existing.GitHubUsername, gitHubUsername, StringComparison.OrdinalIgnoreCase))
                     existing.UpdateGitHubUsername(gitHubUsername);
-
-                if (!string.Equals(existing.Theme, theme, StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(existing.AccentColor, accentColor, StringComparison.OrdinalIgnoreCase))
-                {
-                    existing.UpdateAppearance(theme, accentColor);
-                }
 
                 if (!existing.IsEnabled)
                     existing.Enable();
@@ -139,7 +129,7 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
                     throw new InvalidOperationException("Could not generate a unique badge slug.");
             }
 
-            var badge = new Badge(athleteId, slug, gitHubUsername, theme, accentColor);
+            var badge = new Badge(athleteId, slug, gitHubUsername);
             await _badgeRepository.AddAsync(badge, cancellationToken);
             await _badgeRepository.SaveChangesAsync(cancellationToken);
 

@@ -14,7 +14,7 @@ public sealed class CompleteStravaOAuthHandlerTests
         var authClient = new FakeStravaAuthClient();
         var apiClient = new FakeStravaApiClient(CreateAthleteResponse(firstName: "Lucas"));
         var tokenStore = new FakeTokenStore();
-        var stateStore = new FakeOAuthStateStore(new StravaOAuthStateData("lucas", "purple", "strava"));
+        var stateStore = new FakeOAuthStateStore(new StravaOAuthStateData("lucas"));
         var activitySyncService = new FakeActivitySyncService();
         var athleteRepository = new FakeAthleteRepository();
         var badgeRepository = new FakeBadgeRepository();
@@ -52,7 +52,7 @@ public sealed class CompleteStravaOAuthHandlerTests
         var athleteRepository = new FakeAthleteRepository();
         await athleteRepository.AddAsync(existing, CancellationToken.None);
 
-        var existingBadge = new Badge(existing.Id, "slug-existing", "old-handle", "purple", "strava");
+        var existingBadge = new Badge(existing.Id, "slug-existing", "old-handle");
         existingBadge.Disable();
         var badgeRepository = new FakeBadgeRepository();
         await badgeRepository.AddAsync(existingBadge, CancellationToken.None);
@@ -61,7 +61,7 @@ public sealed class CompleteStravaOAuthHandlerTests
             new FakeStravaAuthClient(),
             new FakeStravaApiClient(CreateAthleteResponse(firstName: "Updated")),
             new FakeTokenStore(),
-            new FakeOAuthStateStore(new StravaOAuthStateData("new-handle", "blue", "cyan")),
+            new FakeOAuthStateStore(new StravaOAuthStateData("new-handle")),
             new FakeActivitySyncService(),
             athleteRepository,
             badgeRepository,
@@ -78,8 +78,6 @@ public sealed class CompleteStravaOAuthHandlerTests
         Assert.Equal("slug-existing", badge!.Slug);
         Assert.Equal("new-handle", badge.GitHubUsername);
         Assert.True(badge.IsEnabled);
-        Assert.Equal("blue", badge.Theme);
-        Assert.Equal("cyan", badge.AccentColor);
     }
 
     [Fact]
@@ -93,7 +91,7 @@ public sealed class CompleteStravaOAuthHandlerTests
             new FakeStravaAuthClient(),
             new FakeStravaApiClient(CreateAthleteResponse(firstName: "Lucas")),
             new FakeTokenStore(),
-            new FakeOAuthStateStore(new StravaOAuthStateData("lucas", "purple", "strava")),
+            new FakeOAuthStateStore(new StravaOAuthStateData("lucas")),
             new FakeActivitySyncService(),
             new FakeAthleteRepository(),
             badgeRepository,

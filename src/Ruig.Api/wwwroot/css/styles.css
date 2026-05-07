@@ -30,11 +30,11 @@
   --success:       #4ade80;
   --danger:        #f87171;
 
-  --gh-0: #1b1b22;
-  --gh-1: #0e4429;
-  --gh-2: #006d32;
-  --gh-3: #26a641;
-  --gh-4: #39d353;
+  --gh-0: #26262e;
+  --gh-1: #4c1d95;
+  --gh-2: #7c3aed;
+  --gh-3: #a78bfa;
+  --gh-4: #c4b5fd;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -463,6 +463,23 @@ a:hover {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
+}
+
+.link-reset {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0 0 0 6px;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.link-reset:hover {
+  color: #c4b5fd;
+  border-bottom-color: currentColor;
 }
 
 /* -------------------- Buttons -------------------- */

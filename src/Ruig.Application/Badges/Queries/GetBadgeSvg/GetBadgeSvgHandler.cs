@@ -1,4 +1,5 @@
 using MediatR;
+using Ruig.Application.Badges;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Heatmaps.Queries.GetHeatmap;
 using System;
@@ -43,8 +44,8 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
                 new GetHeatmapQuery(badge.GitHubUsername, badge.AthleteId, from, to),
                 cancellationToken);
 
-            var theme = request.ThemeOverride ?? badge.Theme;
-            var accent = request.AccentOverride ?? badge.AccentColor;
+            var theme = BadgeStyleCatalog.ResolveTheme(request.Theme).Key;
+            var accent = BadgeStyleCatalog.ResolveAccent(request.Accent).Key;
 
             var svg = _renderer.Render(new BadgeRenderRequest(heatmap, badge.GitHubUsername, theme, accent));
 

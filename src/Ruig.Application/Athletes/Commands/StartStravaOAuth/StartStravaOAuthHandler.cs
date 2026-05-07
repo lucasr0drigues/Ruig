@@ -1,5 +1,4 @@
 using MediatR;
-using Ruig.Application.Badges;
 using Ruig.Application.Common.Interfaces.Strava;
 using System;
 using System.Security.Cryptography;
@@ -25,12 +24,9 @@ namespace Ruig.Application.Athletes.Commands.StartStravaOAuth
         {
             var state = CreateState();
 
-            var theme = BadgeStyleCatalog.ResolveTheme(request.Theme).Key;
-            var accent = BadgeStyleCatalog.ResolveAccent(request.AccentColor).Key;
-
             await _stateStore.StoreAsync(
                 state,
-                new StravaOAuthStateData(request.GitHubUsername, theme, accent),
+                new StravaOAuthStateData(request.GitHubUsername),
                 StateTtl,
                 cancellationToken);
 

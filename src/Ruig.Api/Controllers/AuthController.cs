@@ -20,23 +20,17 @@ namespace Ruig.Api.Controllers
         }
 
         [HttpGet("start")]
-        public async Task<ActionResult> Start(
-            [FromQuery] string githubUsername,
-            [FromQuery] string? theme,
-            [FromQuery] string? accent,
-            CancellationToken cancellationToken)
+        public async Task<ActionResult> Start([FromQuery] string githubUsername, CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _mediator.Send(
-                    new StartStravaOAuthCommand(githubUsername, theme, accent),
-                    cancellationToken);
+                var result = await _mediator.Send(new StartStravaOAuthCommand(githubUsername), cancellationToken);
 
                 return Ok(result);
             }
             catch (ValidationException ex)
             {
-                return BadRequest(new { error = "invalid-input", message = ex.Message });
+                return BadRequest(new { error = "invalid-github-username", message = ex.Message });
             }
         }
 

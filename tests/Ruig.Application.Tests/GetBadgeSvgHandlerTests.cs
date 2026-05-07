@@ -14,7 +14,7 @@ public sealed class GetBadgeSvgHandlerTests
     public async Task Handle_RendersSvgForActiveBadgeUsingTrailingYearWindow()
     {
         var athleteId = Guid.NewGuid();
-        var badge = new Badge(athleteId, "abc123", "lucas", "purple", "strava");
+        var badge = new Badge(athleteId, "abc123", "lucas");
         var badgeRepository = new FakeBadgeRepository(badge);
         var renderer = new FakeRenderer("<svg/>");
         var dateTimeProvider = new FakeDateTimeProvider(new DateTime(2026, 5, 5, 12, 0, 0, DateTimeKind.Utc));
@@ -38,10 +38,10 @@ public sealed class GetBadgeSvgHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PassesBadgeThemeAndAccentToRendererWhenNoOverrides()
+    public async Task Handle_FallsBackToCatalogDefaultsWhenQueryParamsAreMissing()
     {
         var athleteId = Guid.NewGuid();
-        var badge = new Badge(athleteId, "abc123", "lucas", "blue", "cyan");
+        var badge = new Badge(athleteId, "abc123", "lucas");
         var renderer = new FakeRenderer("<svg/>");
 
         var handler = new GetBadgeSvgHandler(
@@ -53,16 +53,16 @@ public sealed class GetBadgeSvgHandlerTests
         await handler.Handle(new GetBadgeSvgQuery("abc123"), CancellationToken.None);
 
         Assert.NotNull(renderer.LastRequest);
-        Assert.Equal("blue", renderer.LastRequest!.ThemeKey);
-        Assert.Equal("cyan", renderer.LastRequest.AccentKey);
+        Assert.Equal("purple", renderer.LastRequest!.ThemeKey);
+        Assert.Equal("strava", renderer.LastRequest.AccentKey);
         Assert.Equal("lucas", renderer.LastRequest.GitHubUsername);
     }
 
     [Fact]
-    public async Task Handle_QueryOverridesTakePrecedence()
+    public async Task Handle_AppliesQueryParamsWhenProvided()
     {
         var athleteId = Guid.NewGuid();
-        var badge = new Badge(athleteId, "abc123", "lucas", "blue", "cyan");
+        var badge = new Badge(athleteId, "abc123", "lucas");
         var renderer = new FakeRenderer("<svg/>");
 
         var handler = new GetBadgeSvgHandler(
@@ -71,11 +71,30 @@ public sealed class GetBadgeSvgHandlerTests
             new FakeDateTimeProvider(new DateTime(2026, 5, 7, 12, 0, 0, DateTimeKind.Utc)),
             new FakeMediator(BuildHeatmap(athleteId, "lucas", new DateOnly(2025, 5, 8), new DateOnly(2026, 5, 7))));
 
-        await handler.Handle(new GetBadgeSvgQuery("abc123", ThemeOverride: "amber", AccentOverride: "magenta"), CancellationToken.None);
+        await handler.Handle(new GetBadgeSvgQuery("abc123", Theme: "amber", Accent: "magenta"), CancellationToken.None);
 
         Assert.NotNull(renderer.LastRequest);
         Assert.Equal("amber", renderer.LastRequest!.ThemeKey);
         Assert.Equal("magenta", renderer.LastRequest.AccentKey);
+    }
+
+    [Fact]
+    public async Task Handle_FallsBackToDefaultsWhenQueryParamsAreUnknown()
+    {
+        var athleteId = Guid.NewGuid();
+        var badge = new Badge(athleteId, "abc123", "lucas");
+        var renderer = new FakeRenderer("<svg/>");
+
+        var handler = new GetBadgeSvgHandler(
+            new FakeBadgeRepository(badge),
+            renderer,
+            new FakeDateTimeProvider(new DateTime(2026, 5, 7, 12, 0, 0, DateTimeKind.Utc)),
+            new FakeMediator(BuildHeatmap(athleteId, "lucas", new DateOnly(2025, 5, 8), new DateOnly(2026, 5, 7))));
+
+        await handler.Handle(new GetBadgeSvgQuery("abc123", Theme: "not-a-theme", Accent: "not-an-accent"), CancellationToken.None);
+
+        Assert.Equal("purple", renderer.LastRequest!.ThemeKey);
+        Assert.Equal("strava", renderer.LastRequest.AccentKey);
     }
 
     [Fact]
@@ -94,7 +113,7 @@ public sealed class GetBadgeSvgHandlerTests
     [Fact]
     public async Task Handle_ThrowsBadgeNotFoundWhenBadgeDisabled()
     {
-        var badge = new Badge(Guid.NewGuid(), "abc123", "lucas", "purple", "strava");
+        var badge = new Badge(Guid.NewGuid(), "abc123", "lucas");
         badge.Disable();
 
         var handler = new GetBadgeSvgHandler(

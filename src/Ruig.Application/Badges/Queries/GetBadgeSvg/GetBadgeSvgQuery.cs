@@ -4,6 +4,6 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
 {
     public sealed record GetBadgeSvgQuery(
         string Slug,
-        string? ThemeOverride = null,
-        string? AccentOverride = null) : IRequest<GetBadgeSvgResult>;
+        string? Theme = null,
+        string? Accent = null) : IRequest<GetBadgeSvgResult>;
 }

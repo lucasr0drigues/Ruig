@@ -1,10 +1,13 @@
 (function () {
   "use strict";
 
+  const DEFAULT_THEME = "purple";
+  const DEFAULT_ACCENT = "strava";
+
   const state = {
     slug: null,
-    selectedTheme: null,
-    selectedAccent: null,
+    selectedTheme: DEFAULT_THEME,
+    selectedAccent: DEFAULT_ACCENT,
     themes: [],
     accents: []
   };
@@ -14,7 +17,6 @@
     state.slug = params.get("slug");
 
     const previewMeta = document.getElementById("preview-meta");
-    const badgeImage = document.getElementById("badge-image");
     const markdownEl = document.getElementById("snippet-markdown");
     const htmlEl = document.getElementById("snippet-html");
     const urlEl = document.getElementById("snippet-url");
@@ -26,8 +28,10 @@
       return;
     }
 
+    restoreSelectionFromStorage();
     refreshSnippets();
 
+    const badgeImage = document.getElementById("badge-image");
     badgeImage.addEventListener("load", function () {
       if (previewMeta) {
         const today = new Date().toISOString().slice(0, 10);
@@ -36,33 +40,70 @@
     });
 
     bindCopyButtons();
+    bindResetButton();
     loadStyles();
   });
 
-  function buildBadgeUrl(absolute, withOverride) {
+  // ---------- Persistence ------------------------------------------------
+
+  function storageKey() {
+    return "ruig:badge:" + state.slug + ":style";
+  }
+
+  function persistSelection() {
+    try {
+      const isDefault = state.selectedTheme === DEFAULT_THEME && state.selectedAccent === DEFAULT_ACCENT;
+      if (isDefault) {
+        localStorage.removeItem(storageKey());
+      } else {
+        localStorage.setItem(storageKey(), JSON.stringify({
+          theme: state.selectedTheme,
+          accent: state.selectedAccent
+        }));
+      }
+    } catch (_) { /* ignore quota / private mode */ }
+  }
+
+  function restoreSelectionFromStorage() {
+    try {
+      const raw = localStorage.getItem(storageKey());
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.theme === "string") state.selectedTheme = parsed.theme;
+      if (parsed && typeof parsed.accent === "string") state.selectedAccent = parsed.accent;
+    } catch (_) { /* ignore */ }
+  }
+
+  // ---------- URL building ------------------------------------------------
+
+  function buildBadgePath() {
     let path = "/badges/" + encodeURIComponent(state.slug) + ".svg";
-    if (withOverride) {
-      const params = new URLSearchParams();
-      if (state.selectedTheme) params.set("theme", state.selectedTheme);
-      if (state.selectedAccent) params.set("accent", state.selectedAccent);
-      const qs = params.toString();
-      if (qs) path += "?" + qs;
+    const params = new URLSearchParams();
+    if (state.selectedTheme && state.selectedTheme !== DEFAULT_THEME) {
+      params.set("theme", state.selectedTheme);
     }
-    return absolute ? window.location.origin + path : path;
+    if (state.selectedAccent && state.selectedAccent !== DEFAULT_ACCENT) {
+      params.set("accent", state.selectedAccent);
+    }
+    const qs = params.toString();
+    if (qs) path += "?" + qs;
+    return path;
   }
 
   function refreshSnippets() {
-    // Snippets always reference the saved (canonical) URL, not the override.
-    const canonicalUrl = window.location.origin + "/badges/" + encodeURIComponent(state.slug) + ".svg";
-    const markdown = "![Ruig heatmap](" + canonicalUrl + ")";
-    const html = '<img src="' + canonicalUrl + '" alt="Ruig heatmap" />';
+    const path = buildBadgePath();
+    const absoluteUrl = window.location.origin + path;
+    const markdown = "![Ruig heatmap](" + absoluteUrl + ")";
+    const html = '<img src="' + absoluteUrl + '" alt="Ruig heatmap" />';
 
     document.getElementById("snippet-markdown").textContent = markdown;
     document.getElementById("snippet-html").textContent = html;
-    document.getElementById("snippet-url").textContent = canonicalUrl;
+    document.getElementById("snippet-url").textContent = absoluteUrl;
 
-    document.getElementById("badge-image").src = buildBadgeUrl(false, true);
+    document.getElementById("badge-image").src = path;
   }
+
+  // ---------- Style catalog -----------------------------------------------
 
   async function loadStyles() {
     try {
@@ -87,15 +128,13 @@
       button.className = "swatch swatch-theme";
       button.dataset.themeKey = theme.key;
       button.title = theme.label;
+      button.setAttribute("role", "radio");
       const stops = theme.levels.map(c => `<span class="swatch-cell" style="background:${c}"></span>`).join("");
       button.innerHTML = `<span class="swatch-strip">${stops}</span><span class="swatch-name">${theme.label}</span>`;
-      button.addEventListener("click", () => {
-        state.selectedTheme = theme.key;
-        document.querySelectorAll(".swatch-theme").forEach(el => el.classList.toggle("is-selected", el.dataset.themeKey === theme.key));
-        refreshSnippets();
-      });
+      button.addEventListener("click", () => selectTheme(theme.key));
       container.appendChild(button);
     });
+    syncThemeSelection();
   }
 
   function renderAccentSwatches() {
@@ -108,15 +147,60 @@
       button.className = "swatch swatch-accent";
       button.dataset.accentKey = accent.key;
       button.title = accent.label;
+      button.setAttribute("role", "radio");
       button.innerHTML = `<span class="swatch-ring" style="border-color:${accent.color}"></span><span class="swatch-name">${accent.label}</span>`;
-      button.addEventListener("click", () => {
-        state.selectedAccent = accent.key;
-        document.querySelectorAll(".swatch-accent").forEach(el => el.classList.toggle("is-selected", el.dataset.accentKey === accent.key));
-        refreshSnippets();
-      });
+      button.addEventListener("click", () => selectAccent(accent.key));
       container.appendChild(button);
     });
+    syncAccentSelection();
   }
+
+  function selectTheme(key) {
+    state.selectedTheme = key;
+    syncThemeSelection();
+    persistSelection();
+    refreshSnippets();
+  }
+
+  function selectAccent(key) {
+    state.selectedAccent = key;
+    syncAccentSelection();
+    persistSelection();
+    refreshSnippets();
+  }
+
+  function syncThemeSelection() {
+    document.querySelectorAll(".swatch-theme").forEach(el => {
+      const active = el.dataset.themeKey === state.selectedTheme;
+      el.classList.toggle("is-selected", active);
+      el.setAttribute("aria-checked", String(active));
+    });
+  }
+
+  function syncAccentSelection() {
+    document.querySelectorAll(".swatch-accent").forEach(el => {
+      const active = el.dataset.accentKey === state.selectedAccent;
+      el.classList.toggle("is-selected", active);
+      el.setAttribute("aria-checked", String(active));
+    });
+  }
+
+  // ---------- Reset -------------------------------------------------------
+
+  function bindResetButton() {
+    const btn = document.getElementById("reset-style");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      state.selectedTheme = DEFAULT_THEME;
+      state.selectedAccent = DEFAULT_ACCENT;
+      syncThemeSelection();
+      syncAccentSelection();
+      persistSelection();
+      refreshSnippets();
+    });
+  }
+
+  // ---------- Copy -------------------------------------------------------
 
   function bindCopyButtons() {
     document.querySelectorAll(".copy").forEach(button => {
