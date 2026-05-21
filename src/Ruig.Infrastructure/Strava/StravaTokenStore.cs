@@ -57,6 +57,7 @@ namespace Ruig.Infrastructure.Strava
                 token.RefreshToken = refreshToken;
                 token.ExpiresAtUtc = expiresAtUtc;
                 token.Scope = scope;
+                token.RevokedAtUtc = null;
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -90,6 +91,28 @@ namespace Ruig.Infrastructure.Strava
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             return token.AccessToken;
+        }
+
+        public async Task<Guid?> GetAthleteIdByStravaAthleteIdAsync(
+            long stravaAthleteId,
+            CancellationToken cancellationToken)
+        {
+            return await _dbContext.StravaTokens
+                .AsNoTracking()
+                .Where(t => t.StravaAthleteId == stravaAthleteId)
+                .Select(t => (Guid?)t.AthleteId)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<Guid?> GetActiveAthleteIdByStravaAthleteIdAsync(
+            long stravaAthleteId,
+            CancellationToken cancellationToken)
+        {
+            return await _dbContext.StravaTokens
+                .AsNoTracking()
+                .Where(t => t.StravaAthleteId == stravaAthleteId && t.RevokedAtUtc == null)
+                .Select(t => (Guid?)t.AthleteId)
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task RevokeByStravaAthleteIdAsync(

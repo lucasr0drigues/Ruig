@@ -3,7 +3,6 @@ using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
-using Ruig.Domain.Enums;
 using Ruig.Infrastructure.Common.Persistance;
 using Ruig.Infrastructure.Common.Persistance.Repositories;
 using Ruig.Infrastructure.Strava;
@@ -25,7 +24,7 @@ public sealed class PersistenceTests
 
         await repository.UpdateFromExternalAsync(athlete.Id, CreateAthlete(firstName: "New"), CancellationToken.None);
 
-        var saved = await repository.GetByExternalIdAsync("123", CancellationToken.None);
+        var saved = await repository.GetByIdAsync(athlete.Id, CancellationToken.None);
         Assert.NotNull(saved);
         Assert.Equal("New", saved.Firstname);
         Assert.NotEqual(default, saved.CreatedAt);
@@ -131,20 +130,7 @@ public sealed class PersistenceTests
     {
         await using var dbContext = CreateDbContext();
         var activeAthlete = CreateAthlete(firstName: "Active");
-        var revokedAthlete = new Athlete(
-            "456",
-            "revoked",
-            "Revoked",
-            "Test",
-            null,
-            null,
-            null,
-            null,
-            Sex.M,
-            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
-            "medium",
-            "profile");
+        var revokedAthlete = new Athlete("Revoked", "Test");
 
         dbContext.Athletes.AddRange(activeAthlete, revokedAthlete);
         await dbContext.SaveChangesAsync();
@@ -181,7 +167,34 @@ public sealed class PersistenceTests
     }
 
     [Fact]
-    public async Task ActivityRepository_GetActiveLocalDatesAsync_ReturnsDistinctDatesExcludingDeleted()
+    public async Task StravaTokenStore_GetAthleteIdByStravaAthleteId_ReturnsActiveTokenAthlete()
+    {
+        await using var dbContext = CreateDbContext();
+        var athlete = CreateAthlete(firstName: "Lucas");
+        dbContext.Athletes.Add(athlete);
+        await dbContext.SaveChangesAsync();
+
+        var store = new StravaTokenStore(
+            dbContext,
+            new FakeStravaAuthClient(),
+            new FakeDateTimeProvider(FixedUtcNow));
+
+        await store.SaveOrUpdateAsync(
+            athlete.Id,
+            123,
+            "access-token",
+            "refresh-token",
+            new DateTimeOffset(FixedUtcNow).AddHours(1),
+            "read,activity:read",
+            CancellationToken.None);
+
+        var athleteId = await store.GetAthleteIdByStravaAthleteIdAsync(123, CancellationToken.None);
+
+        Assert.Equal(athlete.Id, athleteId);
+    }
+
+    [Fact]
+    public async Task ActivityRepository_GetActiveLocalDatesAsync_ReturnsDistinctDates()
     {
         await using var dbContext = CreateDbContext();
         var athlete = CreateAthlete(firstName: "Lucas");
@@ -190,21 +203,10 @@ public sealed class PersistenceTests
 
         var repository = new ActivityRepository(dbContext);
 
-        var startMay1 = new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero);
-        var startMay1Evening = new DateTimeOffset(2026, 5, 1, 18, 0, 0, TimeSpan.Zero);
-        var startMay3 = new DateTimeOffset(2026, 5, 3, 12, 0, 0, TimeSpan.Zero);
-        var startMay7Outside = new DateTimeOffset(2026, 5, 7, 12, 0, 0, TimeSpan.Zero);
-        var startMay4Deleted = new DateTimeOffset(2026, 5, 4, 7, 0, 0, TimeSpan.Zero);
-
-        await repository.UpsertAsync(BuildActivity(athlete.Id, "1", startMay1), CancellationToken.None);
-        await repository.UpsertAsync(BuildActivity(athlete.Id, "2", startMay1Evening), CancellationToken.None);
-        await repository.UpsertAsync(BuildActivity(athlete.Id, "3", startMay3), CancellationToken.None);
-        await repository.UpsertAsync(BuildActivity(athlete.Id, "4", startMay7Outside), CancellationToken.None);
-
-        var deleted = BuildActivity(athlete.Id, "5", startMay4Deleted);
-        deleted.MarkDeleted(new DateTimeOffset(FixedUtcNow));
-        await repository.UpsertAsync(deleted, CancellationToken.None);
-
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 1)), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 1)), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 3)), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 7)), CancellationToken.None);
         await repository.SaveChangesAsync(CancellationToken.None);
 
         var dates = await repository.GetActiveLocalDatesAsync(
@@ -216,6 +218,39 @@ public sealed class PersistenceTests
         var orderedDates = dates.OrderBy(d => d).ToList();
 
         Assert.Equal(new[] { new DateOnly(2026, 5, 1), new DateOnly(2026, 5, 3) }, orderedDates);
+    }
+
+    [Fact]
+    public async Task ActivityRepository_ReplaceLocalDatesAsync_ReplacesDatesInRange()
+    {
+        await using var dbContext = CreateDbContext();
+        var athlete = CreateAthlete(firstName: "Lucas");
+        dbContext.Athletes.Add(athlete);
+        await dbContext.SaveChangesAsync();
+
+        var repository = new ActivityRepository(dbContext);
+
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 1)), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 2)), CancellationToken.None);
+        await repository.UpsertAsync(BuildActivity(athlete.Id, new DateOnly(2026, 5, 9)), CancellationToken.None);
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        await repository.ReplaceLocalDatesAsync(
+            athlete.Id,
+            new DateOnly(2026, 5, 1),
+            new DateOnly(2026, 5, 5),
+            [new DateOnly(2026, 5, 3), new DateOnly(2026, 5, 3)],
+            CancellationToken.None);
+
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        var dates = await dbContext.Activities
+            .Where(a => a.AthleteId == athlete.Id)
+            .Select(a => a.LocalDate)
+            .OrderBy(d => d)
+            .ToListAsync();
+
+        Assert.Equal(new[] { new DateOnly(2026, 5, 3), new DateOnly(2026, 5, 9) }, dates);
     }
 
     [Fact]
@@ -251,41 +286,14 @@ public sealed class PersistenceTests
         return new AppDbContext(options);
     }
 
-    private static Activity BuildActivity(Guid athleteId, string externalId, DateTimeOffset startedAtUtc)
+    private static Activity BuildActivity(Guid athleteId, DateOnly localDate)
     {
-        return new Activity(
-            athleteId,
-            externalId,
-            "Test Activity",
-            ActivitySport.Run,
-            distanceMeters: 5000,
-            movingTimeSeconds: 1800,
-            elapsedTimeSeconds: 1900,
-            totalElevationGainMeters: 10,
-            startedAtUtc: startedAtUtc,
-            utcOffsetAtStart: TimeSpan.Zero,
-            visibility: ActivityVisibility.Everyone,
-            deviceName: null,
-            externalMapId: null,
-            summaryPolyline: null);
+        return new Activity(athleteId, localDate);
     }
 
     private static Athlete CreateAthlete(string firstName)
     {
-        return new Athlete(
-            "123",
-            "lucas",
-            firstName,
-            "Test",
-            null,
-            null,
-            null,
-            null,
-            Sex.M,
-            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
-            "medium",
-            "profile");
+        return new Athlete(firstName, "Test");
     }
 
     private sealed class FakeStravaAuthClient : IStravaAuthClient

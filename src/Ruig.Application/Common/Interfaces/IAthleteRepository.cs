@@ -12,7 +12,6 @@ namespace Ruig.Application.Common.Interfaces
         Task AddAsync(Athlete athlete, CancellationToken cancellationToken);
         Task UpdateFromExternalAsync(Guid athleteId, Athlete externalAthlete, CancellationToken cancellationToken);
         Task SaveChangesAsync(CancellationToken cancellationToken);
-        Task<Athlete?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken);
         Task MarkActivitySyncCompletedAsync(Guid athleteId, DateTimeOffset syncedAtUtc, CancellationToken cancellationToken);
     }
 }

@@ -33,18 +33,8 @@ namespace Ruig.Infrastructure.Strava
 
             return new StravaAthleteResponse(
                 dto.Id,
-                dto.Username,
                 dto.FirstName,
-                dto.LastName,
-                dto.Bio,
-                dto.City,
-                dto.State,
-                dto.Country,
-                dto.Sex,
-                dto.ProfileMedium,
-                dto.Profile,
-                dto.CreatedAt,
-                dto.UpdatedAt);
+                dto.LastName);
         }
 
         public async Task<IReadOnlyList<StravaActivityResponse>> ListAthleteActivitiesAsync(
@@ -131,23 +121,9 @@ namespace Ruig.Infrastructure.Strava
         private static StravaActivityResponse MapActivity(ActivityDto dto)
         {
             return new StravaActivityResponse(
-                dto.Id,
-                dto.Name,
-                dto.SportType ?? dto.Type,
-                dto.DistanceMeters,
-                dto.MovingTimeSeconds,
-                dto.ElapsedTimeSeconds,
-                dto.TotalElevationGainMeters,
                 dto.StartDate,
                 dto.StartDateLocal,
-                dto.UtcOffsetSeconds,
-                dto.Timezone,
-                dto.DeviceName,
-                dto.IsPrivate,
-                dto.Visibility,
-                dto.Map is null
-                    ? null
-                    : new StravaActivityMapResponse(dto.Map.Id, dto.Map.SummaryPolyline));
+                dto.UtcOffsetSeconds);
         }
     }
 }

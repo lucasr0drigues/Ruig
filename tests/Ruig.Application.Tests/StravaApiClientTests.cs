@@ -61,10 +61,10 @@ public sealed class StravaApiClientTests
             CancellationToken.None);
 
         Assert.Equal(2, activities.Count);
-        Assert.Equal(11, activities[0].Id);
-        Assert.Equal("Run", activities[0].SportType);
-        Assert.Equal("abc", activities[0].Map?.SummaryPolyline);
-        Assert.Equal("Ride", activities[1].SportType);
+        Assert.Equal("2026-05-01T10:00:00Z", activities[0].StartDate);
+        Assert.Equal("2026-05-01T07:00:00Z", activities[0].StartDateLocal);
+        Assert.Equal(-10800, activities[0].UtcOffsetSeconds);
+        Assert.Equal("2026-05-02T20:00:00Z", activities[1].StartDate);
 
         Assert.Collection(
             handler.Requests,
@@ -100,9 +100,7 @@ public sealed class StravaApiClientTests
 
         var activity = await client.GetActivityAsync("access-token", 99, CancellationToken.None);
 
-        Assert.Equal(99, activity.Id);
-        Assert.Equal("Lunch Walk", activity.Name);
-        Assert.Equal("Walk", activity.SportType);
+        Assert.Equal("2026-05-03T15:00:00Z", activity.StartDate);
         Assert.Single(handler.Requests);
         Assert.EndsWith("/activities/99", handler.Requests[0].RequestUri?.ToString());
     }

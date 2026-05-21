@@ -21,56 +21,43 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
                 .FirstOrDefaultAsync(a => a.Id == activityId, cancellationToken);
         }
 
-        public Task<Activity?> GetByExternalIdAsync(Guid athleteId, string externalActivityId, CancellationToken cancellationToken)
-        {
-            return _dbContext.Activities
-                .FirstOrDefaultAsync(
-                    a => a.AthleteId == athleteId && a.ExternalActivityId == externalActivityId,
-                    cancellationToken);
-        }
-
         public async Task<PagedResult<ListActivitiesByAthleteDto>> ListByAthleteIdAsync(
-            Guid AthleteId,
-            int Page,
-            int PageSize,
-            DateTime? FromUtc,
-            DateTime? ToUtc,
+            Guid athleteId,
+            int page,
+            int pageSize,
+            DateTime? fromUtc,
+            DateTime? toUtc,
             CancellationToken cancellationToken)
         {
             var query = _dbContext.Activities
                 .AsNoTracking()
-                .Where(a => a.AthleteId == AthleteId && a.DeletedAtUtc == null);
+                .Where(a => a.AthleteId == athleteId);
 
-            if (FromUtc is not null)
+            if (fromUtc is not null)
             {
-                var from = new DateTimeOffset(DateTime.SpecifyKind(FromUtc.Value, DateTimeKind.Utc));
-                query = query.Where(a => a.StartedAtUtc >= from);
+                var from = DateOnly.FromDateTime(fromUtc.Value);
+                query = query.Where(a => a.LocalDate >= from);
             }
 
-            if (ToUtc is not null)
+            if (toUtc is not null)
             {
-                var to = new DateTimeOffset(DateTime.SpecifyKind(ToUtc.Value, DateTimeKind.Utc));
-                query = query.Where(a => a.StartedAtUtc <= to);
+                var to = DateOnly.FromDateTime(toUtc.Value);
+                query = query.Where(a => a.LocalDate <= to);
             }
 
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
-                .OrderByDescending(a => a.StartedAtUtc)
-                .Skip((Page - 1) * PageSize)
-                .Take(PageSize)
+                .OrderByDescending(a => a.LocalDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(a => new ListActivitiesByAthleteDto(
                     a.Id,
                     a.AthleteId,
-                    a.ExternalActivityId,
-                    a.Name,
-                    a.Sport,
-                    a.StartedAtUtc,
-                    a.UtcOffsetAtStart,
-                    a.DeviceName))
+                    a.LocalDate))
                 .ToListAsync(cancellationToken);
 
-            return new PagedResult<ListActivitiesByAthleteDto>(Page, PageSize, totalCount, items);
+            return new PagedResult<ListActivitiesByAthleteDto>(page, pageSize, totalCount, items);
         }
 
         public async Task<IReadOnlyList<DateOnly>> GetActiveLocalDatesAsync(
@@ -82,11 +69,9 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
             return await _dbContext.Activities
                 .AsNoTracking()
                 .Where(a => a.AthleteId == athleteId
-                    && a.DeletedAtUtc == null
-                    && a.LocalDate != null
                     && a.LocalDate >= fromInclusive
                     && a.LocalDate <= toInclusive)
-                .Select(a => a.LocalDate!.Value)
+                .Select(a => a.LocalDate)
                 .Distinct()
                 .ToListAsync(cancellationToken);
         }
@@ -101,16 +86,40 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
 
         public async Task UpsertAsync(Activity activity, CancellationToken cancellationToken)
         {
-            var existing = await GetByExternalIdAsync(activity.AthleteId, activity.ExternalActivityId, cancellationToken);
+            var exists = await _dbContext.Activities.AnyAsync(
+                a => a.AthleteId == activity.AthleteId && a.LocalDate == activity.LocalDate,
+                cancellationToken);
 
-            if (existing is null)
-            {
+            if (!exists)
                 await _dbContext.Activities.AddAsync(activity, cancellationToken);
-            }
-            else
-            {
-                existing.UpdateFromExternal(activity);
-            }
+        }
+
+        public async Task ReplaceLocalDatesAsync(
+            Guid athleteId,
+            DateOnly fromInclusive,
+            DateOnly toInclusive,
+            IEnumerable<DateOnly> localDates,
+            CancellationToken cancellationToken)
+        {
+            var replacementDates = localDates
+                .Where(d => d >= fromInclusive && d <= toInclusive)
+                .Distinct()
+                .ToHashSet();
+
+            var existing = await _dbContext.Activities
+                .Where(a => a.AthleteId == athleteId
+                    && a.LocalDate >= fromInclusive
+                    && a.LocalDate <= toInclusive)
+                .ToListAsync(cancellationToken);
+
+            _dbContext.Activities.RemoveRange(existing.Where(a => !replacementDates.Contains(a.LocalDate)));
+
+            var existingDates = existing.Select(a => a.LocalDate).ToHashSet();
+            var newActivities = replacementDates
+                .Where(d => !existingDates.Contains(d))
+                .Select(d => new Activity(athleteId, d));
+
+            await _dbContext.Activities.AddRangeAsync(newActivities, cancellationToken);
         }
 
         public Task SaveChangesAsync(CancellationToken cancellationToken)

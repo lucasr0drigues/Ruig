@@ -28,8 +28,8 @@ public sealed class CompleteStravaOAuthHandlerTests
 
         var athlete = await athleteRepository.GetByIdAsync(result.AthleteId, CancellationToken.None);
         Assert.NotNull(athlete);
-        Assert.Equal("123", athlete.ExternalAthleteId);
         Assert.Equal("Lucas", athlete.Firstname);
+        Assert.Equal("Test", athlete.Lastname);
         Assert.Equal(result.AthleteId, tokenStore.SavedAthleteId);
         Assert.Equal("read,activity:read", tokenStore.SavedScope);
         Assert.Equal(result.AthleteId, activitySyncService.InitialBackfillAthleteId);
@@ -60,7 +60,7 @@ public sealed class CompleteStravaOAuthHandlerTests
         var handler = new CompleteStravaOAuthHandler(
             new FakeStravaAuthClient(),
             new FakeStravaApiClient(CreateAthleteResponse(firstName: "Updated")),
-            new FakeTokenStore(),
+            new FakeTokenStore(existing.Id),
             new FakeOAuthStateStore(new StravaOAuthStateData("new-handle")),
             new FakeActivitySyncService(),
             athleteRepository,
@@ -127,36 +127,15 @@ public sealed class CompleteStravaOAuthHandlerTests
     {
         return new StravaAthleteResponse(
             123,
-            "lucas",
             firstName,
-            "Test",
-            "bio",
-            "city",
-            "state",
-            "country",
-            "m",
-            "medium",
-            "profile",
-            "2024-01-01T00:00:00Z",
-            "2024-01-02T00:00:00Z");
+            "Test");
     }
 
     private static Athlete CreateAthlete(string firstName)
     {
         return new Athlete(
-            "123",
-            "lucas",
             firstName,
-            "Test",
-            "bio",
-            "city",
-            "state",
-            "country",
-            Ruig.Domain.Enums.Sex.M,
-            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
-            "medium",
-            "profile");
+            "Test");
     }
 
     private sealed class FakeStravaAuthClient : IStravaAuthClient
@@ -219,6 +198,13 @@ public sealed class CompleteStravaOAuthHandlerTests
 
     private sealed class FakeTokenStore : IStravaTokenStore
     {
+        private readonly Guid? _athleteIdByStravaId;
+
+        public FakeTokenStore(Guid? athleteIdByStravaId = null)
+        {
+            _athleteIdByStravaId = athleteIdByStravaId;
+        }
+
         public Guid SavedAthleteId { get; private set; }
         public string? SavedScope { get; private set; }
 
@@ -237,6 +223,16 @@ public sealed class CompleteStravaOAuthHandlerTests
         }
 
         public Task<string?> GetAccessTokenAsync(Guid athleteId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Guid?> GetAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_athleteIdByStravaId);
+        }
+
+        public Task<Guid?> GetActiveAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }
@@ -291,11 +287,6 @@ public sealed class CompleteStravaOAuthHandlerTests
         {
             throw new NotSupportedException();
         }
-
-        public Task MarkActivityDeletedAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException();
-        }
     }
 
     private sealed class FakeAthleteRepository : IAthleteRepository
@@ -328,12 +319,6 @@ public sealed class CompleteStravaOAuthHandlerTests
         public Task SaveChangesAsync(CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
-        }
-
-        public Task<Athlete?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken)
-        {
-            var athlete = _athletesById.Values.FirstOrDefault(a => a.ExternalAthleteId == externalId);
-            return Task.FromResult(athlete);
         }
 
         public Task MarkActivitySyncCompletedAsync(Guid athleteId, DateTimeOffset syncedAtUtc, CancellationToken cancellationToken)

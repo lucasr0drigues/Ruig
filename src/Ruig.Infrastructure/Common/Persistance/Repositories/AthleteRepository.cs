@@ -47,12 +47,6 @@ namespace Ruig.Infrastructure.Common.Persistance.Repositories
             return _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        public Task<Athlete?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken)
-        {
-            return _dbContext.Athletes
-                .FirstOrDefaultAsync(a => a.ExternalAthleteId == externalId, cancellationToken);
-        }
-
         public async Task MarkActivitySyncCompletedAsync(Guid athleteId, DateTimeOffset syncedAtUtc, CancellationToken cancellationToken)
         {
             var athlete = await GetByIdAsync(athleteId, cancellationToken);

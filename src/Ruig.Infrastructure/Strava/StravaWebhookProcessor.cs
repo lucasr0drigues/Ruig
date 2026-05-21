@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
-using Ruig.Domain.Entities;
 using Ruig.Infrastructure.Common.Persistance;
-using System.Globalization;
 using System.Text.Json;
 
 namespace Ruig.Infrastructure.Strava
@@ -13,20 +11,17 @@ namespace Ruig.Infrastructure.Strava
         private const int BatchSize = 25;
 
         private readonly AppDbContext _dbContext;
-        private readonly IAthleteRepository _athleteRepository;
         private readonly IStravaActivitySyncService _activitySyncService;
         private readonly IStravaTokenStore _tokenStore;
         private readonly IDateTimeProvider _dateTimeProvider;
 
         public StravaWebhookProcessor(
             AppDbContext dbContext,
-            IAthleteRepository athleteRepository,
             IStravaActivitySyncService activitySyncService,
             IStravaTokenStore tokenStore,
             IDateTimeProvider dateTimeProvider)
         {
             _dbContext = dbContext;
-            _athleteRepository = athleteRepository;
             _activitySyncService = activitySyncService;
             _tokenStore = tokenStore;
             _dateTimeProvider = dateTimeProvider;
@@ -78,21 +73,19 @@ namespace Ruig.Infrastructure.Strava
 
         private async Task ProcessActivityEventAsync(StravaWebhookEvent webhookEvent, CancellationToken cancellationToken)
         {
-            var athlete = await _athleteRepository.GetByExternalIdAsync(
-                webhookEvent.OwnerId.ToString(CultureInfo.InvariantCulture),
-                cancellationToken);
+            var athleteId = await _tokenStore.GetActiveAthleteIdByStravaAthleteIdAsync(webhookEvent.OwnerId, cancellationToken);
 
-            if (athlete is null)
+            if (athleteId is null)
                 return;
 
             if (IsDeleteEvent(webhookEvent) || IsPrivateUpdate(webhookEvent))
             {
-                await _activitySyncService.MarkActivityDeletedAsync(athlete.Id, webhookEvent.ObjectId, cancellationToken);
+                await _activitySyncService.InitialBackfillAsync(athleteId.Value, cancellationToken);
                 return;
             }
 
             if (IsCreateEvent(webhookEvent) || IsUpdateEvent(webhookEvent))
-                await _activitySyncService.SyncActivityAsync(athlete.Id, webhookEvent.ObjectId, cancellationToken);
+                await _activitySyncService.SyncActivityAsync(athleteId.Value, webhookEvent.ObjectId, cancellationToken);
         }
 
         private static bool IsActivityEvent(StravaWebhookEvent webhookEvent)

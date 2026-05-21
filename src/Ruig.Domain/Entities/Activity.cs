@@ -1,106 +1,26 @@
-﻿using Ruig.Domain.Common;
-using Ruig.Domain.Enums;
-using Ruig.Domain.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Ruig.Domain.Common;
 
 namespace Ruig.Domain.Entities
 {
     public class Activity : BaseEntity
     {
         public Guid AthleteId { get; init; }
-        public string ExternalActivityId { get; private set; }
-        public string? Name { get; private set; }
-        public ActivitySport? Sport { get; private set; }
-        public double? DistanceMeters { get; private set; }
-        public int? MovingTimeSeconds { get; private set; }
-        public int? ElapsedTimeSeconds { get; private set; }
-        public double? TotalElevationGainMeters { get; private set; }
-        public DateTimeOffset? StartedAtUtc { get; private set; }
-        public DateOnly? LocalDate { get; private set; }
-        public TimeSpan? UtcOffsetAtStart { get; private set; }
-        public ActivityVisibility Visibility { get; private set; }
-        public DateTimeOffset? DeletedAtUtc { get; private set; }
-        public string? DeviceName { get; private set; }
-        public ActivityMap? Map { get; private set; }
+        public DateOnly LocalDate { get; private set; }
 
         private Activity()
         {
-            ExternalActivityId = null!;
         }
 
-        public Activity(
-            Guid athleteId,
-            string externalActivityId,
-            string? name,
-            ActivitySport? sport,
-            double? distanceMeters,
-            int? movingTimeSeconds,
-            int? elapsedTimeSeconds,
-            double? totalElevationGainMeters,
-            DateTimeOffset? startedAtUtc,
-            TimeSpan? utcOffsetAtStart,
-            ActivityVisibility visibility,
-            string? deviceName,
-            string? externalMapId,
-            string? summaryPolyline)
+        public Activity(Guid athleteId, DateOnly localDate)
         {
-            if (externalActivityId == null)
-                throw new DomainException("External Activity ID is required.");
+            if (athleteId == Guid.Empty)
+                throw new DomainException("Athlete ID is required.");
+
+            if (localDate == default)
+                throw new DomainException("Local date is required.");
 
             AthleteId = athleteId;
-            ExternalActivityId = externalActivityId;
-            Name = name;
-            Sport = sport;
-            DistanceMeters = distanceMeters;
-            MovingTimeSeconds = movingTimeSeconds;
-            ElapsedTimeSeconds = elapsedTimeSeconds;
-            TotalElevationGainMeters = totalElevationGainMeters;
-            StartedAtUtc = startedAtUtc;
-            LocalDate = GetLocalDate(startedAtUtc, utcOffsetAtStart);
-            UtcOffsetAtStart = utcOffsetAtStart;
-            Visibility = visibility;
-            DeviceName = deviceName;
-
-            Map = string.IsNullOrWhiteSpace(summaryPolyline) ? null : ActivityMap.Create(externalMapId, summaryPolyline);
-        }
-
-        public void MarkDeleted(DateTimeOffset deletedAtUtc)
-        {
-            DeletedAtUtc = deletedAtUtc;
-        }
-
-        public void UpdateFromExternal(Activity externalActivity)
-        {
-            if (externalActivity.AthleteId != AthleteId || externalActivity.ExternalActivityId != ExternalActivityId)
-                throw new DomainException("External Activity identity cannot be changed.");
-
-            Name = externalActivity.Name;
-            Sport = externalActivity.Sport;
-            DistanceMeters = externalActivity.DistanceMeters;
-            MovingTimeSeconds = externalActivity.MovingTimeSeconds;
-            ElapsedTimeSeconds = externalActivity.ElapsedTimeSeconds;
-            TotalElevationGainMeters = externalActivity.TotalElevationGainMeters;
-            StartedAtUtc = externalActivity.StartedAtUtc;
-            LocalDate = externalActivity.LocalDate;
-            UtcOffsetAtStart = externalActivity.UtcOffsetAtStart;
-            Visibility = externalActivity.Visibility;
-            DeviceName = externalActivity.DeviceName;
-            Map = externalActivity.Map;
-            DeletedAtUtc = null;
-        }
-
-        private static DateOnly? GetLocalDate(DateTimeOffset? startedAtUtc, TimeSpan? utcOffsetAtStart)
-        {
-            if (startedAtUtc is null)
-                return null;
-
-            var localDateTime = utcOffsetAtStart is null
-                ? startedAtUtc.Value.UtcDateTime
-                : startedAtUtc.Value.ToOffset(utcOffsetAtStart.Value).DateTime;
-
-            return DateOnly.FromDateTime(localDateTime);
+            LocalDate = localDate;
         }
     }
 }

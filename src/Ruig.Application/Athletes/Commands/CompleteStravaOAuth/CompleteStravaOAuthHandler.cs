@@ -3,9 +3,7 @@ using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
-using Ruig.Domain.Enums;
 using System;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,19 +60,21 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 
             var athlete = MapToDomain(athleteDto);
 
-            var existing = await _athleteRepository.GetByExternalIdAsync(athlete.ExternalAthleteId, cancellationToken);
+            var existingAthleteId = await _tokenStore.GetAthleteIdByStravaAthleteIdAsync(
+                token.StravaAthleteId,
+                cancellationToken);
 
             Guid athleteId;
 
-            if (existing is null)
+            if (existingAthleteId is null)
             {
                 athleteId = athlete.Id;
                 await _athleteRepository.AddAsync(athlete, cancellationToken);
             }
             else
             {
-                athleteId = existing.Id;
-                await _athleteRepository.UpdateFromExternalAsync(existing.Id, athlete, cancellationToken);
+                athleteId = existingAthleteId.Value;
+                await _athleteRepository.UpdateFromExternalAsync(athleteId, athlete, cancellationToken);
             }
 
             var expiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(token.ExpiresAtUnixSeconds);
@@ -138,44 +138,7 @@ namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 
         private static Athlete MapToDomain(StravaAthleteResponse dto)
         {
-            Sex? sex = dto.Sex?.ToLowerInvariant() switch
-            {
-                "m" => Sex.M,
-                "f" => Sex.F,
-                _ => null
-            };
-
-            DateTime createdAt = ParseStravaDate(dto.CreatedAt) ?? DateTime.UtcNow;
-            DateTime updatedAt = ParseStravaDate(dto.UpdatedAt) ?? DateTime.UtcNow;
-
-            return new Athlete(
-                dto.Id.ToString(CultureInfo.InvariantCulture),
-                dto.Username,
-                dto.FirstName,
-                dto.LastName,
-                dto.Bio,
-                dto.City,
-                dto.State,
-                dto.Country,
-                sex,
-                createdAt,
-                updatedAt,
-                dto.ProfileMedium ?? string.Empty,
-                dto.Profile ?? string.Empty);
-        }
-
-        private static DateTime? ParseStravaDate(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return null;
-
-            if (DateTime.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
-                out var dt))
-                return dt;
-
-            return null;
+            return new Athlete(dto.FirstName, dto.LastName);
         }
     }
 }

@@ -8,6 +8,8 @@ namespace Ruig.Application.Common.Interfaces.Strava
     {
         Task SaveOrUpdateAsync(Guid athleteId, long stravaAthleteId, string accessToken, string refreshToken, DateTimeOffset expiresAtUtc, string scope, CancellationToken cancellationToken);
         Task<string?> GetAccessTokenAsync(Guid athleteId, CancellationToken cancellationToken);
+        Task<Guid?> GetAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken);
+        Task<Guid?> GetActiveAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken);
         Task RevokeByStravaAthleteIdAsync(long stravaAthleteId, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken);
         Task<IReadOnlyList<Guid>> ListActiveAthleteIdsAsync(CancellationToken cancellationToken);
     }

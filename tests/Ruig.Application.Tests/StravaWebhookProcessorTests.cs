@@ -3,9 +3,7 @@ using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
-using Ruig.Domain.Enums;
 using Ruig.Infrastructure.Common.Persistance;
-using Ruig.Infrastructure.Common.Persistance.Repositories;
 using Ruig.Infrastructure.Strava;
 using System.Text.Json;
 
@@ -36,7 +34,7 @@ public sealed class StravaWebhookProcessorTests
     }
 
     [Fact]
-    public async Task ProcessPendingAsync_ForActivityDelete_MarksActivityDeleted()
+    public async Task ProcessPendingAsync_ForActivityDelete_RebuildsStoredActivityDays()
     {
         await using var dbContext = CreateDbContext();
         var athlete = CreateAthlete();
@@ -49,8 +47,7 @@ public sealed class StravaWebhookProcessorTests
 
         await processor.ProcessPendingAsync(CancellationToken.None);
 
-        Assert.Equal(athlete.Id, activitySyncService.DeletedAthleteId);
-        Assert.Equal(987, activitySyncService.DeletedActivityId);
+        Assert.Equal(athlete.Id, activitySyncService.InitialBackfillAthleteId);
     }
 
     [Fact]
@@ -79,11 +76,14 @@ public sealed class StravaWebhookProcessorTests
         FakeActivitySyncService? activitySyncService = null,
         FakeTokenStore? tokenStore = null)
     {
+        var athleteId = dbContext.Athletes
+            .Select(a => (Guid?)a.Id)
+            .FirstOrDefault();
+
         return new StravaWebhookProcessor(
             dbContext,
-            new AthleteRepository(dbContext),
             activitySyncService ?? new FakeActivitySyncService(),
-            tokenStore ?? new FakeTokenStore(),
+            tokenStore ?? new FakeTokenStore(athleteId),
             new FakeDateTimeProvider(FixedUtcNow));
     }
 
@@ -99,19 +99,8 @@ public sealed class StravaWebhookProcessorTests
     private static Athlete CreateAthlete()
     {
         return new Athlete(
-            "123",
-            "lucas",
             "Lucas",
-            "Test",
-            null,
-            null,
-            null,
-            null,
-            Sex.M,
-            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
-            "medium",
-            "profile");
+            "Test");
     }
 
     private static StravaWebhookEvent CreateEvent(
@@ -139,12 +128,12 @@ public sealed class StravaWebhookProcessorTests
     {
         public Guid? SyncedAthleteId { get; private set; }
         public long? SyncedActivityId { get; private set; }
-        public Guid? DeletedAthleteId { get; private set; }
-        public long? DeletedActivityId { get; private set; }
+        public Guid? InitialBackfillAthleteId { get; private set; }
 
         public Task InitialBackfillAsync(Guid athleteId, CancellationToken cancellationToken)
         {
-            throw new NotSupportedException();
+            InitialBackfillAthleteId = athleteId;
+            return Task.CompletedTask;
         }
 
         public Task SyncRecentActivitiesAsync(Guid athleteId, TimeSpan lookback, CancellationToken cancellationToken)
@@ -159,16 +148,17 @@ public sealed class StravaWebhookProcessorTests
             return Task.CompletedTask;
         }
 
-        public Task MarkActivityDeletedAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
-        {
-            DeletedAthleteId = athleteId;
-            DeletedActivityId = externalActivityId;
-            return Task.CompletedTask;
-        }
     }
 
     private sealed class FakeTokenStore : IStravaTokenStore
     {
+        private readonly Guid? _athleteIdByStravaId;
+
+        public FakeTokenStore(Guid? athleteIdByStravaId = null)
+        {
+            _athleteIdByStravaId = athleteIdByStravaId;
+        }
+
         public long? RevokedStravaAthleteId { get; private set; }
         public DateTimeOffset? RevokedAtUtc { get; private set; }
 
@@ -187,6 +177,16 @@ public sealed class StravaWebhookProcessorTests
         public Task<string?> GetAccessTokenAsync(Guid athleteId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
+        }
+
+        public Task<Guid?> GetAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Guid?> GetActiveAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_athleteIdByStravaId);
         }
 
         public Task RevokeByStravaAthleteIdAsync(long stravaAthleteId, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken)

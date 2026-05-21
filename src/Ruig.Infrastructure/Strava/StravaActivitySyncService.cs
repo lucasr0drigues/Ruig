@@ -2,7 +2,6 @@ using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
-using Ruig.Domain.Enums;
 using System.Globalization;
 
 namespace Ruig.Infrastructure.Strava
@@ -47,22 +46,12 @@ namespace Ruig.Infrastructure.Strava
         {
             var accessToken = await GetAccessTokenOrThrowAsync(athleteId, cancellationToken);
             var activity = await _apiClient.GetActivityAsync(accessToken, externalActivityId, cancellationToken);
+            var localDate = GetLocalDate(activity);
 
-            await _activityRepository.UpsertAsync(MapToDomain(athleteId, activity), cancellationToken);
-            await _activityRepository.SaveChangesAsync(cancellationToken);
-        }
-
-        public async Task MarkActivityDeletedAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
-        {
-            var activity = await _activityRepository.GetByExternalIdAsync(
-                athleteId,
-                externalActivityId.ToString(CultureInfo.InvariantCulture),
-                cancellationToken);
-
-            if (activity is null)
+            if (localDate is null)
                 return;
 
-            activity.MarkDeleted(GetUtcNow());
+            await _activityRepository.UpsertAsync(new Activity(athleteId, localDate.Value), cancellationToken);
             await _activityRepository.SaveChangesAsync(cancellationToken);
         }
 
@@ -74,11 +63,17 @@ namespace Ruig.Infrastructure.Strava
         {
             var accessToken = await GetAccessTokenOrThrowAsync(athleteId, cancellationToken);
             var activities = await _apiClient.ListAthleteActivitiesAsync(accessToken, afterUtc, beforeUtc, cancellationToken);
+            var localDates = activities.Select(GetLocalDate).OfType<DateOnly>();
 
-            foreach (var activity in activities)
-            {
-                await _activityRepository.UpsertAsync(MapToDomain(athleteId, activity), cancellationToken);
-            }
+            var fromLocalDate = DateOnly.FromDateTime(afterUtc.UtcDateTime.AddDays(-1));
+            var toLocalDate = DateOnly.FromDateTime(beforeUtc.UtcDateTime.AddDays(1));
+
+            await _activityRepository.ReplaceLocalDatesAsync(
+                athleteId,
+                fromLocalDate,
+                toLocalDate,
+                localDates,
+                cancellationToken);
 
             await _activityRepository.SaveChangesAsync(cancellationToken);
             await _athleteRepository.MarkActivitySyncCompletedAsync(athleteId, GetUtcNow(), cancellationToken);
@@ -94,68 +89,33 @@ namespace Ruig.Infrastructure.Strava
             return accessToken;
         }
 
-        private static Activity MapToDomain(Guid athleteId, StravaActivityResponse dto)
+        private static DateOnly? GetLocalDate(StravaActivityResponse dto)
         {
-            return new Activity(
-                athleteId,
-                dto.Id.ToString(CultureInfo.InvariantCulture),
-                dto.Name,
-                ParseSport(dto.SportType),
-                dto.DistanceMeters,
-                dto.MovingTimeSeconds,
-                dto.ElapsedTimeSeconds,
-                dto.TotalElevationGainMeters,
-                ParseStartDate(dto.StartDate),
-                ParseUtcOffset(dto.UtcOffsetSeconds),
-                ParseVisibility(dto),
-                dto.DeviceName,
-                dto.Map?.Id,
-                dto.Map?.SummaryPolyline);
-        }
-
-        private static ActivitySport? ParseSport(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return null;
-
-            return Enum.TryParse<ActivitySport>(value, ignoreCase: true, out var sport)
-                ? sport
-                : null;
-        }
-
-        private static DateTimeOffset? ParseStartDate(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return null;
-
-            return DateTimeOffset.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var startedAt)
-                ? startedAt
-                : null;
-        }
-
-        private static TimeSpan? ParseUtcOffset(double? utcOffsetSeconds)
-        {
-            return utcOffsetSeconds is null
-                ? null
-                : TimeSpan.FromSeconds(utcOffsetSeconds.Value);
-        }
-
-        private static ActivityVisibility ParseVisibility(StravaActivityResponse dto)
-        {
-            if (dto.IsPrivate == true)
-                return ActivityVisibility.OnlyMe;
-
-            return dto.Visibility?.ToLowerInvariant() switch
+            if (!string.IsNullOrWhiteSpace(dto.StartDateLocal)
+                && DateTime.TryParse(
+                    dto.StartDateLocal,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeLocal,
+                    out var localStart))
             {
-                "everyone" => ActivityVisibility.Everyone,
-                "followers_only" or "followers" => ActivityVisibility.FollowersOnly,
-                "only_me" => ActivityVisibility.OnlyMe,
-                _ => ActivityVisibility.Unknown
-            };
+                return DateOnly.FromDateTime(localStart);
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.StartDate)
+                || !DateTimeOffset.TryParse(
+                    dto.StartDate,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out var startedAt))
+            {
+                return null;
+            }
+
+            var localDateTime = dto.UtcOffsetSeconds is null
+                ? startedAt.UtcDateTime
+                : startedAt.ToOffset(TimeSpan.FromSeconds(dto.UtcOffsetSeconds.Value)).DateTime;
+
+            return DateOnly.FromDateTime(localDateTime);
         }
 
         private DateTimeOffset GetUtcNow()

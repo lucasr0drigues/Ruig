@@ -9,6 +9,5 @@ namespace Ruig.Application.Common.Interfaces.Strava
         Task InitialBackfillAsync(Guid athleteId, CancellationToken cancellationToken);
         Task SyncRecentActivitiesAsync(Guid athleteId, TimeSpan lookback, CancellationToken cancellationToken);
         Task SyncActivityAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken);
-        Task MarkActivityDeletedAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken);
     }
 }

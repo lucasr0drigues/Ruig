@@ -58,6 +58,16 @@ public sealed class StravaActivityReconciliationServiceTests
             throw new NotSupportedException();
         }
 
+        public Task<Guid?> GetAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Guid?> GetActiveAthleteIdByStravaAthleteIdAsync(long stravaAthleteId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task RevokeByStravaAthleteIdAsync(long stravaAthleteId, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
@@ -85,11 +95,6 @@ public sealed class StravaActivityReconciliationServiceTests
         }
 
         public Task SyncActivityAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException();
-        }
-
-        public Task MarkActivityDeletedAsync(Guid athleteId, long externalActivityId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }

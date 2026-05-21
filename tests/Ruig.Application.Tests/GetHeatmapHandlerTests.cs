@@ -168,15 +168,12 @@ public sealed class GetHeatmapHandlerTests
         public Task<Activity?> GetByIdAsync(Guid activityId, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
-        public Task<Activity?> GetByExternalIdAsync(Guid athleteId, string externalActivityId, CancellationToken cancellationToken)
-            => throw new NotSupportedException();
-
         public Task<PagedResult<ListActivitiesByAthleteDto>> ListByAthleteIdAsync(
-            Guid AthleteId,
-            int Page,
-            int PageSize,
-            DateTime? FromUtc,
-            DateTime? ToUtc,
+            Guid athleteId,
+            int page,
+            int pageSize,
+            DateTime? fromUtc,
+            DateTime? toUtc,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<bool> AddAsync(Activity activity, CancellationToken cancellationToken)
@@ -184,6 +181,13 @@ public sealed class GetHeatmapHandlerTests
 
         public Task UpsertAsync(Activity activity, CancellationToken cancellationToken)
             => throw new NotSupportedException();
+
+        public Task ReplaceLocalDatesAsync(
+            Guid athleteId,
+            DateOnly fromInclusive,
+            DateOnly toInclusive,
+            IEnumerable<DateOnly> localDates,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task SaveChangesAsync(CancellationToken cancellationToken)
             => throw new NotSupportedException();
