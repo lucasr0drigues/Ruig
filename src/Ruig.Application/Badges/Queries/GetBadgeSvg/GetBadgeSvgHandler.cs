@@ -47,8 +47,9 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
             var theme = BadgeStyleCatalog.ResolveTheme(request.Theme).Key;
             var accent = BadgeStyleCatalog.ResolveAccent(request.Accent).Key;
             var background = BadgeStyleCatalog.ResolveBackground(request.Background).Key;
+            var canvas = BadgeStyleCatalog.ResolveCanvas(request.Canvas).Key;
 
-            var svg = _renderer.Render(new BadgeRenderRequest(heatmap, badge.GitHubUsername, theme, accent, background));
+            var svg = _renderer.Render(new BadgeRenderRequest(heatmap, badge.GitHubUsername, theme, accent, background, canvas));
 
             return new GetBadgeSvgResult(badge.Slug, svg, from, to, new DateTimeOffset(nowUtc));
         }

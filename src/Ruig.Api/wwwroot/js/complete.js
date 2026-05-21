@@ -4,15 +4,18 @@
   const DEFAULT_THEME = "purple";
   const DEFAULT_ACCENT = "strava";
   const DEFAULT_BACKGROUND = "slate";
+  const DEFAULT_CANVAS = "none";
 
   const state = {
     slug: null,
     selectedTheme: DEFAULT_THEME,
     selectedAccent: DEFAULT_ACCENT,
     selectedBackground: DEFAULT_BACKGROUND,
+    selectedCanvas: DEFAULT_CANVAS,
     themes: [],
     accents: [],
-    backgrounds: []
+    backgrounds: [],
+    canvases: []
   };
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -56,7 +59,8 @@
   function isAllDefault() {
     return state.selectedTheme === DEFAULT_THEME
         && state.selectedAccent === DEFAULT_ACCENT
-        && state.selectedBackground === DEFAULT_BACKGROUND;
+        && state.selectedBackground === DEFAULT_BACKGROUND
+        && state.selectedCanvas === DEFAULT_CANVAS;
   }
 
   function persistSelection() {
@@ -67,7 +71,8 @@
         localStorage.setItem(storageKey(), JSON.stringify({
           theme: state.selectedTheme,
           accent: state.selectedAccent,
-          background: state.selectedBackground
+          background: state.selectedBackground,
+          canvas: state.selectedCanvas
         }));
       }
     } catch (_) { /* ignore quota / private mode */ }
@@ -81,6 +86,7 @@
       if (parsed && typeof parsed.theme === "string") state.selectedTheme = parsed.theme;
       if (parsed && typeof parsed.accent === "string") state.selectedAccent = parsed.accent;
       if (parsed && typeof parsed.background === "string") state.selectedBackground = parsed.background;
+      if (parsed && typeof parsed.canvas === "string") state.selectedCanvas = parsed.canvas;
     } catch (_) { /* ignore */ }
   }
 
@@ -97,6 +103,9 @@
     }
     if (state.selectedBackground && state.selectedBackground !== DEFAULT_BACKGROUND) {
       params.set("bg", state.selectedBackground);
+    }
+    if (state.selectedCanvas && state.selectedCanvas !== DEFAULT_CANVAS) {
+      params.set("canvas", state.selectedCanvas);
     }
     const qs = params.toString();
     if (qs) path += "?" + qs;
@@ -126,11 +135,13 @@
       state.themes = data.themes || [];
       state.accents = data.accents || [];
       state.backgrounds = data.backgrounds || [];
+      state.canvases = data.canvases || [];
     } catch (_) { return; }
 
     renderThemeSwatches();
     renderAccentSwatches();
     renderBackgroundSwatches();
+    renderCanvasSwatches();
   }
 
   function renderThemeSwatches() {
@@ -144,8 +155,6 @@
       button.dataset.themeKey = theme.key;
       button.title = theme.label;
       button.setAttribute("role", "radio");
-      // Use only L1..L4 in the strip preview so the empty-cell colour doesn't
-      // mislead users about the theme — the theme is just the active ramp.
       const stops = theme.levels.slice(1).map(c => `<span class="swatch-cell" style="background:${c}"></span>`).join("");
       button.innerHTML = `<span class="swatch-strip">${stops}</span><span class="swatch-name">${theme.label}</span>`;
       button.addEventListener("click", () => selectTheme(theme.key));
@@ -197,6 +206,31 @@
     syncBackgroundSelection();
   }
 
+  function renderCanvasSwatches() {
+    const container = document.getElementById("canvas-swatches");
+    if (!container) return;
+    container.innerHTML = "";
+    state.canvases.forEach(canvas => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "swatch swatch-canvas";
+      button.dataset.canvasKey = canvas.key;
+      button.title = canvas.label;
+      button.setAttribute("role", "radio");
+
+      let chip;
+      if (canvas.color === "none" || canvas.key === "none") {
+        chip = `<span class="swatch-fill swatch-fill-transparent" aria-hidden="true"></span>`;
+      } else {
+        chip = `<span class="swatch-fill" style="background:${canvas.color}" aria-hidden="true"></span>`;
+      }
+      button.innerHTML = `${chip}<span class="swatch-name">${canvas.label}</span>`;
+      button.addEventListener("click", () => selectCanvas(canvas.key));
+      container.appendChild(button);
+    });
+    syncCanvasSelection();
+  }
+
   function selectTheme(key) {
     state.selectedTheme = key;
     syncThemeSelection();
@@ -214,6 +248,13 @@
   function selectBackground(key) {
     state.selectedBackground = key;
     syncBackgroundSelection();
+    persistSelection();
+    refreshSnippets();
+  }
+
+  function selectCanvas(key) {
+    state.selectedCanvas = key;
+    syncCanvasSelection();
     persistSelection();
     refreshSnippets();
   }
@@ -242,6 +283,14 @@
     });
   }
 
+  function syncCanvasSelection() {
+    document.querySelectorAll(".swatch-canvas").forEach(el => {
+      const active = el.dataset.canvasKey === state.selectedCanvas;
+      el.classList.toggle("is-selected", active);
+      el.setAttribute("aria-checked", String(active));
+    });
+  }
+
   // ---------- Reset -------------------------------------------------------
 
   function bindResetButton() {
@@ -251,9 +300,11 @@
       state.selectedTheme = DEFAULT_THEME;
       state.selectedAccent = DEFAULT_ACCENT;
       state.selectedBackground = DEFAULT_BACKGROUND;
+      state.selectedCanvas = DEFAULT_CANVAS;
       syncThemeSelection();
       syncAccentSelection();
       syncBackgroundSelection();
+      syncCanvasSelection();
       persistSelection();
       refreshSnippets();
     });

@@ -7,5 +7,6 @@ namespace Ruig.Application.Common.Interfaces
         string GitHubUsername,
         string ThemeKey,
         string AccentKey,
-        string BackgroundKey);
+        string BackgroundKey,
+        string CanvasKey);
 }

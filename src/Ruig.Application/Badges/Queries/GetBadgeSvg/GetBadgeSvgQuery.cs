@@ -6,5 +6,6 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
         string Slug,
         string? Theme = null,
         string? Accent = null,
-        string? Background = null) : IRequest<GetBadgeSvgResult>;
+        string? Background = null,
+        string? Canvas = null) : IRequest<GetBadgeSvgResult>;
 }

@@ -10,11 +10,14 @@ namespace Ruig.Application.Badges
 
     public sealed record BadgeBackground(string Key, string Label, string Color);
 
+    public sealed record BadgeCanvas(string Key, string Label, string Color);
+
     public static class BadgeStyleCatalog
     {
         public const string DefaultThemeKey = "purple";
         public const string DefaultAccentKey = "strava";
         public const string DefaultBackgroundKey = "slate";
+        public const string DefaultCanvasKey = "none";
 
         public static readonly IReadOnlyDictionary<string, BadgePalette> Themes = new ReadOnlyDictionary<string, BadgePalette>(
             new Dictionary<string, BadgePalette>(StringComparer.OrdinalIgnoreCase)
@@ -58,6 +61,19 @@ namespace Ruig.Application.Badges
                 ["transparent"] = new("transparent", "Transparent", "none")
             });
 
+        // Full SVG canvas backdrop (a single rect drawn behind the heatmap).
+        // "none" leaves the SVG transparent — what users get unless they opt in.
+        public static readonly IReadOnlyDictionary<string, BadgeCanvas> Canvases = new ReadOnlyDictionary<string, BadgeCanvas>(
+            new Dictionary<string, BadgeCanvas>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["none"]   = new("none",   "None",   "none"),
+                ["github"] = new("github", "GitHub", "#0d1117"),
+                ["slate"]  = new("slate",  "Slate",  "#15151b"),
+                ["ink"]    = new("ink",    "Ink",    "#0c0c0e"),
+                ["snow"]   = new("snow",   "Snow",   "#ebedf0"),
+                ["paper"]  = new("paper",  "Paper",  "#f4f4f5")
+            });
+
         public static BadgePalette ResolveTheme(string? key)
         {
             if (!string.IsNullOrWhiteSpace(key) && Themes.TryGetValue(key, out var palette))
@@ -82,6 +98,14 @@ namespace Ruig.Application.Badges
             return Backgrounds[DefaultBackgroundKey];
         }
 
+        public static BadgeCanvas ResolveCanvas(string? key)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && Canvases.TryGetValue(key, out var canvas))
+                return canvas;
+
+            return Canvases[DefaultCanvasKey];
+        }
+
         public static bool IsValidTheme(string? key)
             => !string.IsNullOrWhiteSpace(key) && Themes.ContainsKey(key);
 
@@ -90,5 +114,8 @@ namespace Ruig.Application.Badges
 
         public static bool IsValidBackground(string? key)
             => !string.IsNullOrWhiteSpace(key) && Backgrounds.ContainsKey(key);
+
+        public static bool IsValidCanvas(string? key)
+            => !string.IsNullOrWhiteSpace(key) && Canvases.ContainsKey(key);
     }
 }

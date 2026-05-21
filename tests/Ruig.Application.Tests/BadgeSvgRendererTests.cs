@@ -14,7 +14,7 @@ public sealed class BadgeSvgRendererTests
 
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none"));
 
         Assert.StartsWith("<svg", svg);
         Assert.EndsWith("</svg>", svg);
@@ -37,7 +37,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "green", "cyan", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "green", "cyan", "slate", "none"));
 
         Assert.Contains("fill=\"#39d353\"", svg); // green L4
         Assert.Contains("stroke=\"#22d3ee\"", svg); // cyan accent
@@ -50,7 +50,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "not-a-theme", "not-an-accent", "not-a-bg"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "not-a-theme", "not-an-accent", "not-a-bg", "not-a-canvas"));
 
         // Default = purple + strava
         Assert.Contains("fill=\"#7c3aed\"", svg);
@@ -63,7 +63,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildYearHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucasr0drigues", "purple", "strava", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucasr0drigues", "purple", "strava", "slate", "none"));
 
         Assert.Contains("aria-label=\"Ruig heatmap badge for lucasr0drigues\"", svg);
         Assert.Contains("GitHub: ", svg);
@@ -90,7 +90,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none"));
 
         Assert.Contains(">Less<", svg);
         Assert.Contains(">More<", svg);
@@ -103,7 +103,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "ink"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "ink", "none"));
 
         Assert.Contains("fill=\"#0c0c0e\"", svg); // ink for empty cells (and L0 legend swatch)
         // The default L0 colour from the purple palette should NOT appear, because
@@ -112,12 +112,34 @@ public sealed class BadgeSvgRendererTests
     }
 
     [Fact]
+    public void Render_NoCanvasOmitsBackdropRect()
+    {
+        var renderer = new BadgeSvgRenderer();
+        var heatmap = BuildSampleHeatmap();
+
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none"));
+
+        Assert.DoesNotContain("<rect x=\"0\" y=\"0\"", svg);
+    }
+
+    [Fact]
+    public void Render_GitHubCanvasEmitsFullSvgBackdropRect()
+    {
+        var renderer = new BadgeSvgRenderer();
+        var heatmap = BuildSampleHeatmap();
+
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "github"));
+
+        Assert.Matches(@"<rect x=""0"" y=""0"" width=""\d+"" height=""\d+"" rx=""6"" ry=""6"" fill=""#0d1117""/>", svg);
+    }
+
+    [Fact]
     public void Render_TransparentBackgroundEmitsFillNoneForEmptyCells()
     {
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "transparent"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "transparent", "none"));
 
         Assert.Contains("fill=\"none\"", svg);
     }
@@ -128,7 +150,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildYearHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none"));
 
         Assert.Contains(">Mon<", svg);
         Assert.Contains(">Wed<", svg);
@@ -147,7 +169,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildYearHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none"));
 
         // A full year heatmap should hit every month abbreviation.
         foreach (var month in new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" })
@@ -162,7 +184,7 @@ public sealed class BadgeSvgRendererTests
         var renderer = new BadgeSvgRenderer();
         var heatmap = BuildSampleHeatmap();
 
-        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "<script>x</script>", "purple", "strava", "slate"));
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "<script>x</script>", "purple", "strava", "slate", "none"));
 
         Assert.DoesNotContain("<script>", svg);
         Assert.Contains("&lt;script&gt;", svg);

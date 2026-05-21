@@ -44,7 +44,18 @@ namespace Ruig.Api.Controllers
                     isDefault = kvp.Key == BadgeStyleCatalog.DefaultBackgroundKey
                 });
 
-            return Ok(new { themes, accents, backgrounds });
+            var canvases = BadgeStyleCatalog.Canvases
+                .OrderBy(kvp => kvp.Key == BadgeStyleCatalog.DefaultCanvasKey ? 0 : 1)
+                .ThenBy(kvp => kvp.Key)
+                .Select(kvp => new
+                {
+                    key = kvp.Value.Key,
+                    label = kvp.Value.Label,
+                    color = kvp.Value.Color,
+                    isDefault = kvp.Key == BadgeStyleCatalog.DefaultCanvasKey
+                });
+
+            return Ok(new { themes, accents, backgrounds, canvases });
         }
     }
 }

@@ -47,6 +47,7 @@ namespace Ruig.Infrastructure.Badges
             var palette = BadgeStyleCatalog.ResolveTheme(request.ThemeKey);
             var accent = BadgeStyleCatalog.ResolveAccent(request.AccentKey);
             var background = BadgeStyleCatalog.ResolveBackground(request.BackgroundKey);
+            var canvas = BadgeStyleCatalog.ResolveCanvas(request.CanvasKey);
             var emptyFill = background.Color;
 
             var gridStart = StartOfWeek(heatmap.From);
@@ -75,6 +76,13 @@ namespace Ruig.Infrastructure.Badges
             sb.Append("<style>")
               .Append(".ruig-text{font-family:").Append(FontStack).Append(";}")
               .Append("</style>");
+
+            // Optional full-canvas backdrop ("card" effect).
+            if (!string.Equals(canvas.Color, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append(CultureInfo.InvariantCulture,
+                    $"<rect x=\"0\" y=\"0\" width=\"{width}\" height=\"{height}\" rx=\"6\" ry=\"6\" fill=\"{canvas.Color}\"/>");
+            }
 
             // Month labels (top axis).
             AppendMonthLabels(sb, gridStart, weeks, gridOriginX, gridOriginY);
