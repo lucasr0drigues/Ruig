@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Models;
 using System;
@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Ruig.Application.Activities.Commands.ListActivitiesByAthlete
 {
-    public sealed class ListActivitiesByAthleteHandler : IRequestHandler<ListActivitiesByAthleteQuery, PagedResult<ListActivitiesByAthleteDto>>
+    public sealed class ListActivitiesByAthleteHandler : IRuigRequestHandler<ListActivitiesByAthleteQuery, PagedResult<ListActivitiesByAthleteDto>>
     {
         private readonly IActivityRepository _activityRepository;
 

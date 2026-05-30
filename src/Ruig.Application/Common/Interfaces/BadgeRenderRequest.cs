@@ -8,5 +8,6 @@ namespace Ruig.Application.Common.Interfaces
         string ThemeKey,
         string AccentKey,
         string BackgroundKey,
-        string CanvasKey);
+        string CanvasKey,
+        string? StravaFirstname = null);
 }

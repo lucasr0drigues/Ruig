@@ -70,6 +70,29 @@ public sealed class BadgeSvgRendererTests
         Assert.Contains(">lucasr0drigues<", svg);
     }
 
+    [Fact]
+    public void Render_IncludesStravaFirstnameInFooterWhenProvided()
+    {
+        var renderer = new BadgeSvgRenderer();
+        var heatmap = BuildYearHeatmap();
+
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none", StravaFirstname: "Lucas"));
+
+        Assert.Contains("Strava: ", svg);
+        Assert.Contains(">Lucas<", svg);
+    }
+
+    [Fact]
+    public void Render_OmitsStravaFirstnameWhenAbsent()
+    {
+        var renderer = new BadgeSvgRenderer();
+        var heatmap = BuildYearHeatmap();
+
+        var svg = renderer.Render(new BadgeRenderRequest(heatmap, "lucas", "purple", "strava", "slate", "none"));
+
+        Assert.DoesNotContain("Strava: ", svg);
+    }
+
     private static Heatmap BuildYearHeatmap()
     {
         var from = new DateOnly(2025, 5, 8);
@@ -94,7 +117,7 @@ public sealed class BadgeSvgRendererTests
 
         Assert.Contains(">Less<", svg);
         Assert.Contains(">More<", svg);
-        Assert.Contains(">Strava<", svg);
+        Assert.Contains(">Strava activity<", svg);
     }
 
     [Fact]

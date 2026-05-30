@@ -1,10 +1,7 @@
-﻿using FluentValidation;
-using MediatR;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Ruig.Application.Common.Behaviors;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Ruig.Application.Common.Dispatching;
 
 namespace Ruig.Application
 {
@@ -14,12 +11,12 @@ namespace Ruig.Application
         {
             var assembly = typeof(DependencyInjection).Assembly;
 
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(assembly));
+            services.AddRuigDispatcher(assembly);
 
             services.AddValidatorsFromAssembly(assembly);
 
             services.AddTransient(
-                typeof(IPipelineBehavior<,>),
+                typeof(IRuigPipelineBehavior<,>),
                 typeof(ValidationBehavior<,>));
 
             return services;

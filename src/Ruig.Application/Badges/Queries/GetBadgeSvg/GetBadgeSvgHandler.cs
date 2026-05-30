@@ -1,5 +1,5 @@
-using MediatR;
 using Ruig.Application.Badges;
+using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Heatmaps.Queries.GetHeatmap;
 using System;
@@ -8,25 +8,28 @@ using System.Threading.Tasks;
 
 namespace Ruig.Application.Badges.Queries.GetBadgeSvg
 {
-    public sealed class GetBadgeSvgHandler : IRequestHandler<GetBadgeSvgQuery, GetBadgeSvgResult>
+    public sealed class GetBadgeSvgHandler : IRuigRequestHandler<GetBadgeSvgQuery, GetBadgeSvgResult>
     {
         private static readonly TimeSpan HeatmapWindow = TimeSpan.FromDays(365);
 
         private readonly IBadgeRepository _badgeRepository;
+        private readonly IAthleteRepository _athleteRepository;
         private readonly IBadgeSvgRenderer _renderer;
         private readonly IDateTimeProvider _dateTimeProvider;
-        private readonly IMediator _mediator;
+        private readonly IRuigDispatcher _dispatcher;
 
         public GetBadgeSvgHandler(
             IBadgeRepository badgeRepository,
+            IAthleteRepository athleteRepository,
             IBadgeSvgRenderer renderer,
             IDateTimeProvider dateTimeProvider,
-            IMediator mediator)
+            IRuigDispatcher dispatcher)
         {
             _badgeRepository = badgeRepository;
+            _athleteRepository = athleteRepository;
             _renderer = renderer;
             _dateTimeProvider = dateTimeProvider;
-            _mediator = mediator;
+            _dispatcher = dispatcher;
         }
 
         public async Task<GetBadgeSvgResult> Handle(GetBadgeSvgQuery request, CancellationToken cancellationToken)
@@ -40,7 +43,7 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
             var to = DateOnly.FromDateTime(nowUtc);
             var from = to.AddDays(-(int)HeatmapWindow.TotalDays + 1);
 
-            var heatmap = await _mediator.Send(
+            var heatmap = await _dispatcher.Send(
                 new GetHeatmapQuery(badge.GitHubUsername, badge.AthleteId, from, to),
                 cancellationToken);
 
@@ -49,7 +52,9 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
             var background = BadgeStyleCatalog.ResolveBackground(request.Background).Key;
             var canvas = BadgeStyleCatalog.ResolveCanvas(request.Canvas).Key;
 
-            var svg = _renderer.Render(new BadgeRenderRequest(heatmap, badge.GitHubUsername, theme, accent, background, canvas));
+            var athlete = await _athleteRepository.GetByIdAsync(badge.AthleteId, cancellationToken);
+
+            var svg = _renderer.Render(new BadgeRenderRequest(heatmap, badge.GitHubUsername, theme, accent, background, canvas, athlete?.Firstname));
 
             return new GetBadgeSvgResult(badge.Slug, svg, from, to, new DateTimeOffset(nowUtc));
         }

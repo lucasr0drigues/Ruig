@@ -1,7 +1,7 @@
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using Ruig.Application.Badges.Queries.GetBadgeSvg;
+using Ruig.Application.Common.Dispatching;
 using System.Text;
 
 namespace Ruig.Api.Controllers
@@ -10,11 +10,11 @@ namespace Ruig.Api.Controllers
     [Route("badges")]
     public sealed class BadgesController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IRuigDispatcher _dispatcher;
 
-        public BadgesController(IMediator mediator)
+        public BadgesController(IRuigDispatcher dispatcher)
         {
-            _mediator = mediator;
+            _dispatcher = dispatcher;
         }
 
         [HttpGet("{slug}.svg")]
@@ -31,7 +31,7 @@ namespace Ruig.Api.Controllers
 
             try
             {
-                result = await _mediator.Send(new GetBadgeSvgQuery(slug, theme, accent, bg, canvas), cancellationToken);
+                result = await _dispatcher.Send(new GetBadgeSvgQuery(slug, theme, accent, bg, canvas), cancellationToken);
             }
             catch (BadgeNotFoundException)
             {

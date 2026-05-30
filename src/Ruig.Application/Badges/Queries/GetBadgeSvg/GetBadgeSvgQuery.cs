@@ -1,4 +1,4 @@
-using MediatR;
+using Ruig.Application.Common.Dispatching;
 
 namespace Ruig.Application.Badges.Queries.GetBadgeSvg
 {
@@ -7,5 +7,5 @@ namespace Ruig.Application.Badges.Queries.GetBadgeSvg
         string? Theme = null,
         string? Accent = null,
         string? Background = null,
-        string? Canvas = null) : IRequest<GetBadgeSvgResult>;
+        string? Canvas = null) : IRuigRequest<GetBadgeSvgResult>;
 }

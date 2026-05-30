@@ -1,8 +1,6 @@
-﻿using MediatR;
+using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Common.Models;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Ruig.Application.Activities.Commands.ListActivitiesByAthlete
 {
@@ -11,5 +9,5 @@ namespace Ruig.Application.Activities.Commands.ListActivitiesByAthlete
         int Page = 1,
         int PageSize = 50,
         DateTime? FromUtc = null,
-        DateTime? ToUtc = null) : IRequest<PagedResult<ListActivitiesByAthleteDto>>;
+        DateTime? ToUtc = null) : IRuigRequest<PagedResult<ListActivitiesByAthleteDto>>;
 }

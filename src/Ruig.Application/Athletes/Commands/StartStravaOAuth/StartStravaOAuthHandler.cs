@@ -1,4 +1,4 @@
-using MediatR;
+using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Common.Interfaces.Strava;
 using System;
 using System.Security.Cryptography;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Ruig.Application.Athletes.Commands.StartStravaOAuth
 {
-    public sealed class StartStravaOAuthHandler : IRequestHandler<StartStravaOAuthCommand, StartStravaOAuthResult>
+    public sealed class StartStravaOAuthHandler : IRuigRequestHandler<StartStravaOAuthCommand, StartStravaOAuthResult>
     {
         private static readonly TimeSpan StateTtl = TimeSpan.FromMinutes(10);
 

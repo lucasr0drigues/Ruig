@@ -141,19 +141,24 @@ namespace Ruig.Infrastructure.Badges
             // Right-anchor: build legend right-to-left.
             var rightX = gridOriginX + gridWidth;
 
-            // Strava legend chip on the far right.
-            var stravaLabel = "Strava";
+            // Strava activity legend chip on the far right. Position the chip first,
+            // then start the label immediately after with text-anchor="start" — this
+            // keeps the chip flush with the text regardless of how much ApproxTextWidth
+            // over- or under-estimates the label.
+            var stravaLabel = "Strava activity";
             var stravaLabelWidth = ApproxTextWidth(stravaLabel);
-            var stravaChipX = rightX - stravaLabelWidth;
-            sb.Append(CultureInfo.InvariantCulture,
-                $"<text class=\"ruig-text\" x=\"{rightX}\" y=\"{footerTextY}\" text-anchor=\"end\" font-size=\"10\" fill=\"{TextColor}\">")
-              .Append(stravaLabel)
-              .Append("</text>");
+            var chipTextGap = 4;
 
-            var stravaDotCx = stravaChipX - 12;
+            var stravaDotCx = rightX - stravaLabelWidth - (legendCellSize / 2) - chipTextGap;
             var stravaDotCy = footerTextY - 3;
             sb.Append(CultureInfo.InvariantCulture,
                 $"<rect x=\"{stravaDotCx - legendCellSize / 2}\" y=\"{stravaDotCy - legendCellSize / 2}\" width=\"{legendCellSize}\" height=\"{legendCellSize}\" rx=\"2\" fill=\"none\" stroke=\"{accent.Color}\" stroke-width=\"{StravaStrokeWidth.ToString(CultureInfo.InvariantCulture)}\"/>");
+
+            var stravaTextX = stravaDotCx + (legendCellSize / 2) + chipTextGap;
+            sb.Append(CultureInfo.InvariantCulture,
+                $"<text class=\"ruig-text\" x=\"{stravaTextX}\" y=\"{footerTextY}\" font-size=\"10\" fill=\"{TextColor}\">")
+              .Append(stravaLabel)
+              .Append("</text>");
 
             // Less ▢▢▢▢▢ More cluster, anchored to the left of the Strava chip.
             var moreLabel = "More";
@@ -179,8 +184,22 @@ namespace Ruig.Infrastructure.Badges
             sb.Append(CultureInfo.InvariantCulture,
                 $"<text class=\"ruig-text\" x=\"{lessX}\" y=\"{footerTextY}\" text-anchor=\"end\" font-size=\"10\" fill=\"{TextColor}\">Less</text>");
 
-            // Username on the left of the footer (anti-theft signature), aligned with the grid.
-            var displayName = TruncateForFooter(request.GitHubUsername, lessX - ApproxTextWidth("Less") - gridOriginX - 8);
+            // Username (and optional Strava firstname) on the left of the footer,
+            // aligned with the grid. Firstname is bounded to ~14 chars so it can't
+            // crowd the github username out of the visible band.
+            const int stravaPartGap = 14;
+            string? stravaFirstname = null;
+            var stravaPartWidth = 0;
+            if (!string.IsNullOrWhiteSpace(request.StravaFirstname))
+            {
+                stravaFirstname = TruncateForFooter(request.StravaFirstname.Trim(), 14 * 6);
+                if (!string.IsNullOrEmpty(stravaFirstname))
+                {
+                    stravaPartWidth = stravaPartGap + ApproxTextWidth("Strava: ") + ApproxTextWidth(stravaFirstname);
+                }
+            }
+
+            var displayName = TruncateForFooter(request.GitHubUsername, lessX - ApproxTextWidth("Less") - gridOriginX - 8 - stravaPartWidth);
             sb.Append(CultureInfo.InvariantCulture,
                 $"<text class=\"ruig-text\" x=\"{gridOriginX}\" y=\"{footerTextY}\" font-size=\"11\" fill=\"{TextStrong}\" font-weight=\"600\">")
               .Append("GitHub: ")
@@ -188,8 +207,19 @@ namespace Ruig.Infrastructure.Badges
               .Append(TextColor)
               .Append("\">")
               .Append(WebUtility.HtmlEncode(displayName))
-              .Append("</tspan>")
-              .Append("</text>");
+              .Append("</tspan>");
+
+            if (!string.IsNullOrEmpty(stravaFirstname))
+            {
+                sb.Append(CultureInfo.InvariantCulture, $"<tspan dx=\"{stravaPartGap}\">Strava: </tspan>")
+                  .Append("<tspan font-weight=\"400\" fill=\"")
+                  .Append(TextColor)
+                  .Append("\">")
+                  .Append(WebUtility.HtmlEncode(stravaFirstname))
+                  .Append("</tspan>");
+            }
+
+            sb.Append("</text>");
 
             sb.Append("</svg>");
 

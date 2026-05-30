@@ -1,4 +1,4 @@
-using MediatR;
+using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Ruig.Application.Athletes.Commands.CompleteStravaOAuth
 {
-    public sealed class CompleteStravaOAuthHandler : IRequestHandler<CompleteStravaOAuthCommand, CompleteStravaOAuthResult>
+    public sealed class CompleteStravaOAuthHandler : IRuigRequestHandler<CompleteStravaOAuthCommand, CompleteStravaOAuthResult>
     {
         private const int SlugUniquenessAttempts = 5;
 

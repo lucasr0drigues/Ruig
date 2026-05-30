@@ -1,8 +1,8 @@
 using FluentValidation;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Ruig.Application.Athletes.Commands.CompleteStravaOAuth;
 using Ruig.Application.Athletes.Commands.StartStravaOAuth;
+using Ruig.Application.Common.Dispatching;
 
 namespace Ruig.Api.Controllers
 {
@@ -10,12 +10,12 @@ namespace Ruig.Api.Controllers
     [Route("auth/strava")]
     public sealed class AuthController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IRuigDispatcher _dispatcher;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IMediator mediator, ILogger<AuthController> logger)
+        public AuthController(IRuigDispatcher dispatcher, ILogger<AuthController> logger)
         {
-            _mediator = mediator;
+            _dispatcher = dispatcher;
             _logger = logger;
         }
 
@@ -24,7 +24,7 @@ namespace Ruig.Api.Controllers
         {
             try
             {
-                var result = await _mediator.Send(new StartStravaOAuthCommand(githubUsername), cancellationToken);
+                var result = await _dispatcher.Send(new StartStravaOAuthCommand(githubUsername), cancellationToken);
 
                 return Ok(result);
             }
@@ -39,7 +39,7 @@ namespace Ruig.Api.Controllers
         {
             try
             {
-                var result = await _mediator.Send(new CompleteStravaOAuthCommand(code, state), cancellationToken);
+                var result = await _dispatcher.Send(new CompleteStravaOAuthCommand(code, state), cancellationToken);
 
                 return Redirect($"/setup-complete.html?slug={Uri.EscapeDataString(result.BadgeSlug)}");
             }

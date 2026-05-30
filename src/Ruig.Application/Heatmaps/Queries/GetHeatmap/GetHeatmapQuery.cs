@@ -1,4 +1,4 @@
-using MediatR;
+using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Heatmaps.Models;
 using System;
 
@@ -8,5 +8,5 @@ namespace Ruig.Application.Heatmaps.Queries.GetHeatmap
         string GitHubUsername,
         Guid AthleteId,
         DateOnly From,
-        DateOnly To) : IRequest<Heatmap>;
+        DateOnly To) : IRuigRequest<Heatmap>;
 }

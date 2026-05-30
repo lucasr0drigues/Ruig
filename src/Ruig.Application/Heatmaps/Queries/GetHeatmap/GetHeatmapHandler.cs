@@ -1,4 +1,4 @@
-using MediatR;
+using Ruig.Application.Common.Dispatching;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.GitHub;
 using Ruig.Application.Common.Interfaces.GitHub.Models;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Ruig.Application.Heatmaps.Queries.GetHeatmap
 {
-    public sealed class GetHeatmapHandler : IRequestHandler<GetHeatmapQuery, Heatmap>
+    public sealed class GetHeatmapHandler : IRuigRequestHandler<GetHeatmapQuery, Heatmap>
     {
         private readonly IGitHubContributionsService _gitHubContributions;
         private readonly IActivityRepository _activityRepository;

@@ -377,6 +377,11 @@ a:hover {
   flex-wrap: wrap;
 }
 
+.picker-row + .picker-row {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 .picker-label {
   font-size: 11px;
   text-transform: uppercase;
