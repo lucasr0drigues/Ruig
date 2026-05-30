@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Infrastructure.Common.Persistance;
+using Ruig.Infrastructure.Security;
 
 namespace Ruig.Infrastructure.Strava
 {
@@ -12,15 +13,18 @@ namespace Ruig.Infrastructure.Strava
         private readonly AppDbContext _dbContext;
         private readonly IStravaAuthClient _authClient;
         private readonly IDateTimeProvider _dateTimeProvider;
+        private readonly ITokenEncryptor _tokenEncryptor;
 
         public StravaTokenStore(
             AppDbContext dbContext,
             IStravaAuthClient authClient,
-            IDateTimeProvider dateTimeProvider)
+            IDateTimeProvider dateTimeProvider,
+            ITokenEncryptor tokenEncryptor)
         {
             _dbContext = dbContext;
             _authClient = authClient;
             _dateTimeProvider = dateTimeProvider;
+            _tokenEncryptor = tokenEncryptor;
         }
 
         public async Task SaveOrUpdateAsync(
@@ -42,8 +46,8 @@ namespace Ruig.Infrastructure.Strava
                     Id = Guid.NewGuid(),
                     AthleteId = athleteId,
                     StravaAthleteId = stravaAthleteId,
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
+                    AccessToken = _tokenEncryptor.Encrypt(accessToken),
+                    RefreshToken = _tokenEncryptor.Encrypt(refreshToken),
                     ExpiresAtUtc = expiresAtUtc,
                     Scope = scope
                 };
@@ -53,8 +57,8 @@ namespace Ruig.Infrastructure.Strava
             else
             {
                 token.StravaAthleteId = stravaAthleteId;
-                token.AccessToken = accessToken;
-                token.RefreshToken = refreshToken;
+                token.AccessToken = _tokenEncryptor.Encrypt(accessToken);
+                token.RefreshToken = _tokenEncryptor.Encrypt(refreshToken);
                 token.ExpiresAtUtc = expiresAtUtc;
                 token.Scope = scope;
                 token.RevokedAtUtc = null;
@@ -76,21 +80,22 @@ namespace Ruig.Infrastructure.Strava
                 if (token.RevokedAtUtc is not null)
                     return null;
 
-                return token.AccessToken;
+                return _tokenEncryptor.Decrypt(token.AccessToken);
             }
 
             if (token.RevokedAtUtc is not null)
                 return null;
 
-            var refreshed = await _authClient.RefreshTokenAsync(token.RefreshToken, cancellationToken);
+            var refreshToken = _tokenEncryptor.Decrypt(token.RefreshToken);
+            var refreshed = await _authClient.RefreshTokenAsync(refreshToken, cancellationToken);
 
-            token.AccessToken = refreshed.AccessToken;
-            token.RefreshToken = refreshed.RefreshToken;
+            token.AccessToken = _tokenEncryptor.Encrypt(refreshed.AccessToken);
+            token.RefreshToken = _tokenEncryptor.Encrypt(refreshed.RefreshToken);
             token.ExpiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(refreshed.ExpiresAtUnixSeconds);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            return token.AccessToken;
+            return refreshed.AccessToken;
         }
 
         public async Task<Guid?> GetAthleteIdByStravaAthleteIdAsync(

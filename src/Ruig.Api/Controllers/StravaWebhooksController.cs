@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Ruig.Application.Common.Interfaces.Strava;
@@ -8,6 +9,7 @@ using System.Text.Json.Serialization;
 namespace Ruig.Api.Controllers
 {
     [ApiController]
+    [EnableRateLimiting("strava-webhooks")]
     [Route("webhooks/strava")]
     public sealed class StravaWebhooksController : ControllerBase
     {
@@ -48,6 +50,9 @@ namespace Ruig.Api.Controllers
             [FromBody] StravaWebhookEventRequest request,
             CancellationToken cancellationToken)
         {
+            if (!IsValidSubscription(request.SubscriptionId))
+                return Unauthorized();
+
             await _eventStore.SaveAsync(
                 new StravaWebhookEventMessage(
                     request.ObjectType,
@@ -64,8 +69,14 @@ namespace Ruig.Api.Controllers
 
         private bool IsValidVerifyToken(string? verifyToken)
         {
-            return string.IsNullOrWhiteSpace(_options.WebhookVerifyToken) ||
+            return !string.IsNullOrWhiteSpace(_options.WebhookVerifyToken) &&
                    string.Equals(_options.WebhookVerifyToken, verifyToken, StringComparison.Ordinal);
+        }
+
+        private bool IsValidSubscription(long subscriptionId)
+        {
+            return _options.WebhookSubscriptionId <= 0 ||
+                   _options.WebhookSubscriptionId == subscriptionId;
         }
     }
 

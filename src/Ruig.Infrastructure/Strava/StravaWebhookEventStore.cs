@@ -2,6 +2,7 @@ using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Infrastructure.Common.Persistance;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace Ruig.Infrastructure.Strava
@@ -19,6 +20,11 @@ namespace Ruig.Infrastructure.Strava
 
         public async Task SaveAsync(StravaWebhookEventMessage message, CancellationToken cancellationToken)
         {
+            var eventTimeUtc = DateTimeOffset.FromUnixTimeSeconds(message.EventTimeUnixSeconds);
+
+            if (await EventExistsAsync(message, eventTimeUtc, cancellationToken))
+                return;
+
             var webhookEvent = new StravaWebhookEvent
             {
                 Id = Guid.NewGuid(),
@@ -27,7 +33,7 @@ namespace Ruig.Infrastructure.Strava
                 AspectType = message.AspectType,
                 OwnerId = message.OwnerId,
                 SubscriptionId = message.SubscriptionId,
-                EventTimeUtc = DateTimeOffset.FromUnixTimeSeconds(message.EventTimeUnixSeconds),
+                EventTimeUtc = eventTimeUtc,
                 UpdatesJson = JsonSerializer.Serialize(message.Updates),
                 ReceivedAtUtc = GetUtcNow()
             };
@@ -38,10 +44,35 @@ namespace Ruig.Infrastructure.Strava
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
             {
                 _dbContext.ChangeTracker.Clear();
             }
+        }
+
+        private Task<bool> EventExistsAsync(
+            StravaWebhookEventMessage message,
+            DateTimeOffset eventTimeUtc,
+            CancellationToken cancellationToken)
+        {
+            return _dbContext.StravaWebhookEvents.AnyAsync(
+                e => e.ObjectType == message.ObjectType
+                    && e.ObjectId == message.ObjectId
+                    && e.AspectType == message.AspectType
+                    && e.EventTimeUtc == eventTimeUtc,
+                cancellationToken);
+        }
+
+        private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+        {
+            for (var current = ex.InnerException; current is not null; current = current.InnerException)
+            {
+                var sqlState = current.GetType().GetProperty("SqlState")?.GetValue(current) as string;
+                if (string.Equals(sqlState, "23505", StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
         }
 
         private DateTimeOffset GetUtcNow()

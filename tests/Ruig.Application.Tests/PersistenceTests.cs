@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Ruig.Application.Common.Interfaces;
 using Ruig.Application.Common.Interfaces.Strava;
 using Ruig.Application.Common.Interfaces.Strava.Models;
 using Ruig.Domain.Entities;
 using Ruig.Infrastructure.Common.Persistance;
 using Ruig.Infrastructure.Common.Persistance.Repositories;
+using Ruig.Infrastructure.Security;
 using Ruig.Infrastructure.Strava;
 
 namespace Ruig.Application.Tests;
@@ -40,7 +42,8 @@ public sealed class PersistenceTests
         await dbContext.SaveChangesAsync();
 
         var authClient = new FakeStravaAuthClient();
-        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow));
+        var tokenEncryptor = CreateTokenEncryptor();
+        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow), tokenEncryptor);
 
         await store.SaveOrUpdateAsync(
             athlete.Id,
@@ -65,7 +68,9 @@ public sealed class PersistenceTests
         Assert.Equal("access-two", accessToken);
         Assert.False(authClient.RefreshWasCalled);
         Assert.Equal(1, await dbContext.StravaTokens.CountAsync());
-        Assert.Equal("refresh-two", await dbContext.StravaTokens.Select(t => t.RefreshToken).SingleAsync());
+        var storedRefreshToken = await dbContext.StravaTokens.Select(t => t.RefreshToken).SingleAsync();
+        Assert.NotEqual("refresh-two", storedRefreshToken);
+        Assert.Equal("refresh-two", tokenEncryptor.Decrypt(storedRefreshToken));
     }
 
     [Fact]
@@ -77,7 +82,8 @@ public sealed class PersistenceTests
         await dbContext.SaveChangesAsync();
 
         var authClient = new FakeStravaAuthClient();
-        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow));
+        var tokenEncryptor = CreateTokenEncryptor();
+        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow), tokenEncryptor);
 
         await store.SaveOrUpdateAsync(
             athlete.Id,
@@ -93,7 +99,9 @@ public sealed class PersistenceTests
         Assert.Equal("fresh-access", accessToken);
         Assert.True(authClient.RefreshWasCalled);
         Assert.Equal("old-refresh", authClient.ObservedRefreshToken);
-        Assert.Equal("fresh-refresh", await dbContext.StravaTokens.Select(t => t.RefreshToken).SingleAsync());
+        var storedRefreshToken = await dbContext.StravaTokens.Select(t => t.RefreshToken).SingleAsync();
+        Assert.NotEqual("fresh-refresh", storedRefreshToken);
+        Assert.Equal("fresh-refresh", tokenEncryptor.Decrypt(storedRefreshToken));
         Assert.Equal(1_900_000_000, await dbContext.StravaTokens.Select(t => t.ExpiresAtUtc.ToUnixTimeSeconds()).SingleAsync());
     }
 
@@ -106,7 +114,7 @@ public sealed class PersistenceTests
         await dbContext.SaveChangesAsync();
 
         var authClient = new FakeStravaAuthClient();
-        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow));
+        var store = new StravaTokenStore(dbContext, authClient, new FakeDateTimeProvider(FixedUtcNow), CreateTokenEncryptor());
 
         await store.SaveOrUpdateAsync(
             athlete.Id,
@@ -138,7 +146,8 @@ public sealed class PersistenceTests
         var store = new StravaTokenStore(
             dbContext,
             new FakeStravaAuthClient(),
-            new FakeDateTimeProvider(FixedUtcNow));
+            new FakeDateTimeProvider(FixedUtcNow),
+            CreateTokenEncryptor());
 
         await store.SaveOrUpdateAsync(
             activeAthlete.Id,
@@ -177,7 +186,8 @@ public sealed class PersistenceTests
         var store = new StravaTokenStore(
             dbContext,
             new FakeStravaAuthClient(),
-            new FakeDateTimeProvider(FixedUtcNow));
+            new FakeDateTimeProvider(FixedUtcNow),
+            CreateTokenEncryptor());
 
         await store.SaveOrUpdateAsync(
             athlete.Id,
@@ -277,6 +287,26 @@ public sealed class PersistenceTests
         Assert.Equal(new DateTimeOffset(FixedUtcNow), savedEvent.ReceivedAtUtc);
     }
 
+    [Fact]
+    public async Task StravaWebhookEventStore_SaveAsync_IgnoresDuplicateEvent()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new StravaWebhookEventStore(dbContext, new FakeDateTimeProvider(FixedUtcNow));
+        var message = new StravaWebhookEventMessage(
+            "activity",
+            987,
+            "create",
+            123,
+            456,
+            1_800_000_000,
+            new Dictionary<string, string>());
+
+        await store.SaveAsync(message, CancellationToken.None);
+        await store.SaveAsync(message, CancellationToken.None);
+
+        Assert.Equal(1, await dbContext.StravaWebhookEvents.CountAsync());
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -294,6 +324,18 @@ public sealed class PersistenceTests
     private static Athlete CreateAthlete(string firstName)
     {
         return new Athlete(firstName, "Test");
+    }
+
+    private static ITokenEncryptor CreateTokenEncryptor()
+    {
+        return new AesGcmTokenEncryptor(Options.Create(new TokenEncryptionOptions
+        {
+            CurrentKeyId = "test",
+            Keys = new Dictionary<string, string>
+            {
+                ["test"] = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+            }
+        }));
     }
 
     private sealed class FakeStravaAuthClient : IStravaAuthClient

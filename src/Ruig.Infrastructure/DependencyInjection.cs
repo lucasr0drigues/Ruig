@@ -10,6 +10,7 @@ using Ruig.Infrastructure.Common;
 using Ruig.Infrastructure.Common.Persistance;
 using Ruig.Infrastructure.Common.Persistance.Repositories;
 using Ruig.Infrastructure.GitHub;
+using Ruig.Infrastructure.Security;
 using Ruig.Infrastructure.Strava;
 
 namespace Ruig.Infrastructure
@@ -20,6 +21,7 @@ namespace Ruig.Infrastructure
         {
             services.Configure<StravaOptions>(configuration.GetSection(StravaOptions.SectionName));
             services.Configure<GitHubOptions>(configuration.GetSection(GitHubOptions.SectionName));
+            services.Configure<TokenEncryptionOptions>(configuration.GetSection(TokenEncryptionOptions.SectionName));
 
             services.AddMemoryCache();
 
@@ -34,6 +36,7 @@ namespace Ruig.Infrastructure
             services.AddScoped<IBadgeRepository, BadgeRepository>();
             services.AddSingleton<IBadgeSlugGenerator, RandomBadgeSlugGenerator>();
             services.AddSingleton<IBadgeSvgRenderer, BadgeSvgRenderer>();
+            services.AddSingleton<ITokenEncryptor, AesGcmTokenEncryptor>();
             services.AddScoped<IStravaTokenStore, StravaTokenStore>();
             services.AddScoped<IStravaActivitySyncService, StravaActivitySyncService>();
             services.AddScoped<IStravaWebhookEventStore, StravaWebhookEventStore>();

@@ -54,13 +54,35 @@ public sealed class StravaWebhooksControllerTests
         Assert.Equal(987, eventStore.SavedMessage.ObjectId);
     }
 
+    [Fact]
+    public async Task ReceiveEvent_WithUnexpectedSubscriptionId_ReturnsUnauthorized()
+    {
+        var eventStore = new FakeWebhookEventStore();
+        var controller = CreateController(eventStore);
+
+        var result = await controller.ReceiveEvent(
+            new StravaWebhookEventRequest(
+                "activity",
+                987,
+                "create",
+                123,
+                999,
+                1_800_000_000,
+                new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+        Assert.Null(eventStore.SavedMessage);
+    }
+
     private static StravaWebhooksController CreateController(FakeWebhookEventStore? eventStore = null)
     {
         return new StravaWebhooksController(
             eventStore ?? new FakeWebhookEventStore(),
             Options.Create(new StravaOptions
             {
-                WebhookVerifyToken = "verify-token"
+                WebhookVerifyToken = "verify-token",
+                WebhookSubscriptionId = 456
             }));
     }
 
