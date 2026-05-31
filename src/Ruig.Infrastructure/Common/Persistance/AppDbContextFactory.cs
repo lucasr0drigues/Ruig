@@ -13,6 +13,7 @@ namespace Ruig.Infrastructure.Common.Persistance
         {
             var connectionString =
                 Environment.GetEnvironmentVariable("RUIG_CONNECTION_STRING") ??
+                Environment.GetEnvironmentVariable("ConnectionStrings__Default") ??
                 ReadConnectionStringFromAppSettings() ??
                 DefaultConnectionString;
 

@@ -1,0 +1,89 @@
+name: ruig
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ruig-postgres
+    restart: unless-stopped
+    env_file:
+      - /etc/ruig/ruig.env
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
+      -c effective_cache_size=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: ruig-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - /etc/ruig/ruig.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ForwardedHeaders__TrustAll: "true"
+    expose:
+      - "8080"
+    networks:
+      - app_network
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrations
+    container_name: ruig-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - /etc/ruig/ruig.env
+    networks:
+      - app_network
+    profiles:
+      - tools
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: ruig-caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file:
+      - /etc/ruig/ruig.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app_network:
+    driver: bridge

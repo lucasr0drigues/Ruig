@@ -23,7 +23,9 @@ public sealed class TokenEncryptorTests
     {
         var encryptor = CreateEncryptor();
         var protectedText = encryptor.Encrypt("strava-token");
-        var tampered = protectedText[..^1] + (protectedText[^1] == 'A' ? 'B' : 'A');
+        var parts = protectedText.Split(':');
+        parts[3] = (parts[3][0] == 'A' ? 'B' : 'A') + parts[3][1..];
+        var tampered = string.Join(":", parts);
 
         Assert.ThrowsAny<CryptographicException>(() => encryptor.Decrypt(tampered));
     }

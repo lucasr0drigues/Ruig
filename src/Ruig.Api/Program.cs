@@ -19,8 +19,17 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         ForwardedHeaders.XForwardedFor |
         ForwardedHeaders.XForwardedProto |
         ForwardedHeaders.XForwardedHost;
-    options.KnownProxies.Add(IPAddress.Loopback);
-    options.KnownProxies.Add(IPAddress.IPv6Loopback);
+
+    if (builder.Configuration.GetValue<bool>("ForwardedHeaders:TrustAll"))
+    {
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    }
+    else
+    {
+        options.KnownProxies.Add(IPAddress.Loopback);
+        options.KnownProxies.Add(IPAddress.IPv6Loopback);
+    }
 });
 
 builder.Services.AddControllers();
