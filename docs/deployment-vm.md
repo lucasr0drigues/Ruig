@@ -49,6 +49,28 @@ openssl rand -hex 32
 
 For the first boot, `Strava__WebhookSubscriptionId` may be set to any positive temporary value, such as `1`. The webhook verification `GET` does not use the subscription id. Replace it with the real Strava subscription id immediately after registering the webhook.
 
+### GitHub token rotation
+
+`GitHub__AccessToken` is a GitHub personal access token used by the badge renderer to query GitHub GraphQL contribution data. Do not commit the token value; store it only in `/etc/ruig/ruig.env` on the VM or in the secure backup for production secrets.
+
+The production GitHub token was rotated on 2026-06-06 and expires on 2027-06-06. Set a reminder to rotate it before that date. If the token expires or is revoked, badge SVG requests will return `500` and the API logs will show `POST https://api.github.com/graphql` followed by `401 Unauthorized`.
+
+To rotate it:
+
+1. Generate a new GitHub personal access token at `https://github.com/settings/personal-access-tokens/new`.
+2. Update `GitHub__AccessToken` in `/etc/ruig/ruig.env`.
+3. Restart the API:
+
+```bash
+docker compose up -d api
+```
+
+4. Confirm a badge URL returns `200 OK`:
+
+```bash
+curl -sS -D - -o /dev/null "https://<your-domain>/badges/<slug>.svg"
+```
+
 ## 3. Build and start PostgreSQL
 
 ```bash
